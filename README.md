@@ -30,7 +30,7 @@ It is **highly recommended** to use a Conda environment to manage the dependenci
 
 1. **Clone the Repository:**
    ```bash
-   git clone https://github.com/yourusername/kraken_tools.git
+   git clone https://github.com/haslamdb/kraken_tools.git
    cd kraken_tools
    ```
 
