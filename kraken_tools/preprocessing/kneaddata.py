@@ -1,9 +1,10 @@
+# kraken_tools/preprocessing/kneaddata.py
 import os
 import subprocess
 import logging
-from humann3_tools.utils.cmd_utils import run_cmd
-from humann3_tools.logger import log_print
-from humann3_tools.utils.resource_utils import track_peak_memory 
+from kraken_tools.utils.cmd_utils import run_cmd
+from kraken_tools.logger import log_print
+from kraken_tools.utils.resource_utils import track_peak_memory 
 
 def check_kneaddata_installation():
     """Check if KneadData is installed and available."""
@@ -22,7 +23,7 @@ def process_single_sample_kneaddata(input_file, sample_id=None, output_dir=None,
                                    additional_options=None, logger=None):
     """Process a single sample with KneadData."""
     if logger is None:
-        logger = logging.getLogger('humann3_analysis')
+        logger = logging.getLogger('kraken_analysis')
     
     if sample_id is None:
         sample_id = os.path.basename(input_file).split('.')[0]
@@ -88,7 +89,7 @@ def process_single_sample_kneaddata(input_file, sample_id=None, output_dir=None,
 # Define this function at the module level (outside any other function)
 def paired_kneaddata_wrapper(input_file, sample_id=None, paired_file=None, **kwargs):
     """Wrapper to handle paired files correctly for KneadData."""
-    logger = kwargs.get('logger', logging.getLogger('humann3_analysis'))
+    logger = kwargs.get('logger', logging.getLogger('kraken_analysis'))
     
     # Log what we're processing
     if paired_file:
@@ -132,10 +133,10 @@ def run_kneaddata_parallel(input_files, output_dir, threads=1, max_parallel=None
     Returns:
         Dict mapping sample IDs to output files
     """
-    from humann3_tools.preprocessing.parallel import run_parallel
+    from kraken_tools.preprocessing.parallel import run_parallel
     
     if logger is None:
-        logger = logging.getLogger('humann3_analysis')
+        logger = logging.getLogger('kraken_analysis')
     
     # Create sample list based on input type
     sample_list = []
@@ -202,7 +203,7 @@ def run_kneaddata(input_files, output_dir, threads=1, reference_dbs=None,
         List of output FASTQ files
     """
     if logger is None:
-        logger = logging.getLogger('humann3_analysis')
+        logger = logging.getLogger('kraken_analysis')
     
     os.makedirs(output_dir, exist_ok=True)
     
