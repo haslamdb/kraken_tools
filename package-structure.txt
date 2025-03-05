@@ -1,0 +1,27 @@
+kraken_tools/
+├── __init__.py
+├── cli.py
+├── logger.py
+├── main.py
+├── preprocessing/
+│   ├── __init__.py
+│   ├── kneaddata.py
+│   ├── kraken_run.py
+│   └── bracken_run.py
+├── analysis/
+│   ├── __init__.py
+│   ├── abundance.py
+│   ├── metadata.py
+│   ├── taxonomy.py
+│   ├── statistical.py
+│   ├── differential.py
+│   └── visualizations.py
+├── utils/
+│   ├── __init__.py
+│   ├── cmd_utils.py
+│   ├── file_utils.py
+│   ├── sample_utils.py
+│   ├── taxonomy_utils.py
+│   └── resource_utils.py
+└── data/
+    └── taxonomy_databases.py
