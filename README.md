@@ -36,7 +36,7 @@ It is **highly recommended** to use a Conda environment to manage the dependenci
 
 2. **Create a Conda Environment:**
    ```bash
-   conda create -n kraken_tools python=3.10 -y
+   conda create -n kraken_tools python=3.12 -y
    conda activate kraken_tools
    ```
 
