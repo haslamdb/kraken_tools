@@ -1,0 +1,59 @@
+flowchart TD
+    subgraph Inputs
+        A1[Raw Reads\n*.fastq/*.fastq.gz] --> B1
+        A2[Sample Metadata\nmetadata.csv] --> C1
+    end
+
+    subgraph "Stage 1: Preprocessing"
+        B1[KneadData\nQC and Host Depletion] --> B2[Clean Reads]
+    end
+
+    subgraph "Stage 2: Taxonomic Classification"
+        B2 --> C1[Kraken2\nTaxonomic Assignment]
+        C1 --> C2[kreport files]
+        C2 --> C3[Bracken\nAbundance Estimation]
+        C3 --> C4[Bracken Abundance Files]
+    end
+
+    subgraph "Stage 3: Data Processing"
+        C2 --> D1[Merge kreport Files]
+        C4 --> D2[Merge Bracken Files]
+        D1 --> D3[Normalize and Filter\nAbundance Tables]
+        D2 --> D3
+        D3 --> D4[Processed\nAbundance Data]
+    end
+
+    subgraph "Stage 4: Statistical Analysis"
+        D4 --> E1[Diversity Analysis\nShannon, Simpson, etc.]
+        D4 --> E2[PCA and\nCluster Analysis]
+        D4 --> E3[Statistical Tests\nKruskal-Wallis, Dunn's]
+        D4 --> E4[Differential Abundance\nALDEx2, ANCOM, ANCOM-BC]
+        D4 --> E5[GLMM Analysis\nZero-inflated Poisson/NegBin]
+    end
+
+    subgraph "CLI Commands"
+        CMD1["kraken-tools full-pipeline"]
+        CMD2["kraken-tools preprocess"]
+        CMD3["kraken-tools classify"]
+        CMD4["kraken-tools process"]
+        CMD5["kraken-tools analyze"]
+        CMD6["kraken-tools diff-abundance"]
+        CMD7["kraken-tools glmm"]
+    end
+
+    CMD1 -.-> A1
+    CMD1 -.-> E5
+    CMD2 -.-> B1
+    CMD3 -.-> C1
+    CMD4 -.-> D1
+    CMD5 -.-> E2
+    CMD6 -.-> E4
+    CMD7 -.-> E5
+
+    style CMD1 fill:#f9f,stroke:#333,stroke-width:2px
+    style CMD2 fill:#bbf,stroke:#333,stroke-width:2px
+    style CMD3 fill:#bbf,stroke:#333,stroke-width:2px
+    style CMD4 fill:#bbf,stroke:#333,stroke-width:2px
+    style CMD5 fill:#bbf,stroke:#333,stroke-width:2px
+    style CMD6 fill:#bbf,stroke:#333,stroke-width:2px
+    style CMD7 fill:#bbf,stroke:#333,stroke-width:2px
