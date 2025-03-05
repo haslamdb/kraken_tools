@@ -1,0 +1,2 @@
+[console_scripts]
+kraken-tools = kraken_tools.cli:main
