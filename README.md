@@ -13,7 +13,59 @@ Kraken Tools provides an end-to-end solution for microbiome analysis:
 
 ## Installation
 
+Kraken Tools offers multiple installation methods to suit different user preferences and environments.
+
 ### Conda Environment Setup (Recommended)
+
+It is **highly recommended** to use a dedicated Conda environment to manage the dependencies for `kraken_tools`.
+
+#### Option 1: Using the Python Setup Script
+
+```bash
+# Clone the repository
+git clone https://github.com/haslamdb/kraken_tools.git
+
+# Navigate to package directory
+cd kraken_tools 
+
+# Run the setup script
+python conda_setup.py
+
+# Activate the environment
+conda activate kraken-tools
+
+# Verify the installation
+kraken-tools --help
+```
+
+#### Option 2: Using the Shell Script (Unix/Linux/macOS)
+
+```bash
+# Clone the repository
+git clone https://github.com/haslamdb/kraken_tools.git
+cd kraken_tools
+
+# Make the script executable and run it
+chmod +x conda_setup.sh
+./conda_setup.sh
+
+# Activate the environment
+conda activate kraken-tools
+```
+
+#### For Customized Installation
+
+Both setup scripts support various options:
+```bash
+# Example with custom environment name and Python version
+python conda_setup.py --name my-kraken-env --python 3.10
+# Or with shell script
+./conda_setup.sh --name my-kraken-env --python 3.10
+```
+
+### Manual Conda Installation
+
+If you prefer to set up the environment manually:
 
 ```bash
 # Clone the repository
@@ -21,8 +73,8 @@ git clone https://github.com/haslamdb/kraken_tools.git
 cd kraken_tools
 
 # Create a Conda environment
-conda create -n kraken_tools python=3.12 -y
-conda activate kraken_tools
+conda create -n kraken-tools python=3.12 -y
+conda activate kraken-tools
 
 # Install dependencies
 conda install -c conda-forge -c bioconda pandas numpy scipy scikit-bio scikit-learn scikit-posthocs statsmodels matplotlib seaborn matplotlib-venn tqdm psutil
@@ -32,14 +84,24 @@ conda install -c bioconda kraken2 bracken kneaddata
 pip install -e .
 ```
 
-### Standard Installation
+### Pip Installation
+
+If you prefer not to use Conda, you can install directly using pip:
 
 ```bash
-# Install directly using pip (once published to PyPI)
-pip install kraken-tools
+# Clone the repository
+git clone https://github.com/haslamdb/kraken_tools.git
+cd kraken_tools
 
-# Note: External tools (Kraken2, Bracken, KneadData) must be installed separately
+# Install in development mode
+pip install -e .
 ```
+
+**Note**: When using pip, you'll need to manually install Kraken2, Bracken, and KneadData separately.
+
+### Detailed Installation Instructions
+
+For detailed installation instructions, troubleshooting tips, and advanced options, see the [Installation Guide](install-guide.md).
 
 ## Command-Line Usage
 
