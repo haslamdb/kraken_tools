@@ -172,7 +172,7 @@ kraken-tools permanova \
     --permutations 999
 ```
 
-#### 9. Feature Selection with Random Forest
+#### 9. Microbiome-Wide Feature Selection with Random Forest
 
 ```bash
 kraken-tools feature-selection \
@@ -184,7 +184,7 @@ kraken-tools feature-selection \
     --transform clr
 ```
 
-#### 10. Random Forest with SHAP Analysis
+#### 10. Organism-Level Feature Selection with Random Forest with SHAP 
 
 ```bash
 kraken-tools rf-shap \
