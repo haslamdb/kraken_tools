@@ -53,7 +53,7 @@ Kraken Tools provides a comprehensive set of commands for different stages of mi
 | `preprocess` | Run only preprocessing (KneadData) for quality control and host depletion |
 | `classify` | Run only taxonomic classification (Kraken2 + Bracken) |
 | `process` | Process existing Kraken/Bracken files without re-running classification |
-| `analyze` | Run downstream analysis on processed abundance data |
+| `analyze` | Preliminary group-based analysis on processed abundance data |
 
 ### Advanced Analyses
 
