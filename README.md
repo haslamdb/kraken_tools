@@ -114,7 +114,7 @@ kraken-tools classify \
     --threads 8
 ```
 
-#### 4. Process Existing Kraken/Bracken Files
+#### 4. Merge and Filter Kraken/Bracken Files
 
 ```bash
 kraken-tools process \
@@ -126,8 +126,7 @@ kraken-tools process \
     --min-prevalence 0.1
 ```
 
-#### 5. Preliminary Group-Based Analysis
-####    Heatmap, PCA, Diversity Metrics, and Statistical Tests
+#### 5. Preliminary Group-Based Analysis (Heatmap, PCA, Diversity Metrics, and Statistical Tests)
 
 
 ```bash
