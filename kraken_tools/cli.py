@@ -23,8 +23,6 @@ from kraken_tools.main import (
 from kraken_tools.analysis.permanova import run_permanova_analysis
 from kraken_tools.analysis.feature_selection import run_feature_selection
 from kraken_tools.analysis.rf_shap import run_rf_shap_analysis
-from kraken_tools.utils.db_validation import validate_database, DatabaseType
-from kraken_tools.utils.cmd_utils import CommandErrorType
 
 
 def setup_common_args(parser):
@@ -134,184 +132,6 @@ def setup_parallel_args(parser):
     )
     return parser
 
-def setup_database_check_args(parser):
-    """Add database validation command arguments."""
-    database_check_parser = parser.add_parser("check-db", help="Check database validity and configuration")
-    database_check_parser = setup_common_args(database_check_parser)
-    database_check_parser.add_argument(
-        "--db-path", required=True, help="Path to database directory or file"
-    )
-    database_check_parser.add_argument(
-        "--db-type", required=True, choices=["kraken", "bracken", "kneaddata"],
-        help="Type of database to check"
-    )
-    return database_check_parser
-
-
-def handle_classify_command(args):
-    """Handle the 'classify' command."""
-    # Setup logging
-    logger = setup_logger(log_file=args.log_file, log_level=getattr(logging, args.log_level))
-    log_print("Starting taxonomic classification", level="info")
-    
-    # Validate input files
-    if not args.input_fastq:
-        log_print("ERROR: --input-fastq is required for classification", level="error")
-        sys.exit(1)
-    
-    # Validate databases before running tools
-    if not args.skip_kraken:
-        # First check if kraken is installed
-        kraken_ok, kraken_msg = check_kraken_installation()
-        if not kraken_ok:
-            log_print(f"ERROR: Kraken2 not properly installed: {kraken_msg}", level="error")
-            log_print("Please install Kraken2 before continuing. You can install it with:", level="info")
-            log_print("  conda install -c bioconda kraken2", level="info")
-            sys.exit(1)
-        
-        # Then validate the database
-        kraken_db_validation = validate_database(args.kraken_db, DatabaseType.KRAKEN, logger)
-        if not kraken_db_validation.success:
-            log_print(f"ERROR: Kraken database validation failed. Please check the database and try again.", level="error")
-            sys.exit(1)
-    
-    if not args.skip_bracken and args.output_type != "kraken":
-        # First check if bracken is installed
-        bracken_ok, bracken_msg = check_bracken_installation()
-        if not bracken_ok:
-            log_print(f"ERROR: Bracken not properly installed: {bracken_msg}", level="error")
-            log_print("Please install Bracken before continuing. You can install it with:", level="info")
-            log_print("  conda install -c bioconda bracken", level="info")
-            sys.exit(1)
-        
-        # Then validate the database
-        bracken_db_validation = validate_database(args.bracken_db, DatabaseType.BRACKEN, logger)
-        if not bracken_db_validation.success:
-            log_print(f"ERROR: Bracken database validation failed. Please check the database and try again.", level="error")
-            sys.exit(1)
-    
-    # Create output directories
-    os.makedirs(args.output_dir, exist_ok=True)
-    kreport_dir = os.path.join(args.output_dir, "kraken_reports")
-    bracken_dir = os.path.join(args.output_dir, "bracken_output")
-    os.makedirs(kreport_dir, exist_ok=True)
-    os.makedirs(bracken_dir, exist_ok=True)
-    
-    # Run Kraken2 if not skipped
-    kreport_files = {}
-    if not args.skip_kraken and args.output_type != "bracken":
-        log_print("Starting Kraken2 classification...", level="info")
-        
-        from kraken_tools.preprocessing.kraken_run import run_kraken, run_kraken_parallel
-        
-        try:
-            if args.use_parallel:
-                kraken_results = run_kraken_parallel(
-                    input_files=args.input_fastq,
-                    output_dir=kreport_dir,
-                    threads=args.threads_per_sample,
-                    max_parallel=args.max_parallel,
-                    kraken_db=args.kraken_db,
-                    paired=args.paired,
-                    logger=logger
-                )
-            else:
-                kraken_results = run_kraken(
-                    input_files=args.input_fastq,
-                    output_dir=kreport_dir,
-                    threads=args.threads,
-                    kraken_db=args.kraken_db,
-                    paired=args.paired,
-                    logger=logger
-                )
-            
-            if not kraken_results:
-                log_print("ERROR: Kraken2 classification failed for all samples", level="error")
-                sys.exit(1)
-            
-            kreport_files = {sample_id: results['report'] for sample_id, results in kraken_results.items()}
-            log_print(f"Kraken2 completed with {len(kreport_files)} reports", level="info")
-            
-        except Exception as e:
-            log_print(f"ERROR during Kraken2 classification: {str(e)}", level="error")
-            logger.error(traceback.format_exc())
-            sys.exit(1)
-    
-    # Run Bracken if not skipped
-    if not args.skip_bracken and args.output_type != "kraken":
-        log_print("Starting Bracken abundance estimation...", level="info")
-        
-        from kraken_tools.preprocessing.bracken_run import run_bracken, run_bracken_parallel
-        
-        try:
-            if args.use_parallel:
-                bracken_results = run_bracken_parallel(
-                    kreport_files=kreport_files if kreport_files else None,
-                    output_dir=bracken_dir,
-                    threads=args.threads_per_sample,
-                    max_parallel=args.max_parallel,
-                    bracken_db=args.bracken_db,
-                    taxonomic_level=args.taxonomic_level,
-                    threshold=args.threshold,
-                    logger=logger
-                )
-            else:
-                bracken_results = run_bracken(
-                    kreport_files=kreport_files if kreport_files else None,
-                    output_dir=bracken_dir,
-                    threads=args.threads,
-                    bracken_db=args.bracken_db,
-                    taxonomic_level=args.taxonomic_level,
-                    threshold=args.threshold,
-                    logger=logger
-                )
-            
-            if not bracken_results:
-                log_print("ERROR: Bracken abundance estimation failed for all samples", level="error")
-                sys.exit(1)
-            
-            log_print(f"Bracken completed for {len(bracken_results)} samples", level="info")
-            
-        except Exception as e:
-            log_print(f"ERROR during Bracken abundance estimation: {str(e)}", level="error")
-            logger.error(traceback.format_exc())
-            sys.exit(1)
-    
-    log_print("Taxonomic classification completed successfully", level="info")
-    
-    # Print success summary
-    if not args.skip_kraken and args.output_type != "bracken":
-        log_print(f"Kraken reports written to: {kreport_dir}", level="info")
-    if not args.skip_bracken and args.output_type != "kraken":
-        log_print(f"Bracken abundance files written to: {bracken_dir}", level="info")
-    
-    # Suggest next steps
-    log_print("\nNext steps:", level="info")
-    log_print("  1. Run 'kraken-tools process' to process the Kraken/Bracken outputs", level="info")
-    log_print("  2. Run 'kraken-tools analyze' to perform downstream analysis", level="info")
-
-def run_database_diagnostic(db_path, db_type_name, logger):
-    """Run a database diagnostic check and print results."""
-    if db_type_name.lower() == "kraken":
-        db_type = DatabaseType.KRAKEN
-    elif db_type_name.lower() == "bracken":
-        db_type = DatabaseType.BRACKEN
-    elif db_type_name.lower() == "kneaddata":
-        db_type = DatabaseType.KNEADDATA
-    else:
-        logger.error(f"Unknown database type: {db_type_name}")
-        return False
-    
-    logger.info(f"Running diagnostic check on {db_type_name} database: {db_path}")
-    validation_result = validate_database(db_path, db_type, logger)
-    
-    if validation_result.success:
-        logger.info(f"Database validation successful")
-        return True
-    else:
-        logger.error(f"Database validation failed: {validation_result.error_message}")
-        return False
-
 
 def main():
     """Main entry point for the kraken_tools CLI."""
@@ -358,6 +178,12 @@ See documentation for more examples and detailed parameter descriptions.
     full_pipeline_parser.add_argument(
         "--run-diff-abundance", action="store_true", help="Run differential abundance analysis"
     )
+    full_pipeline_parser.add_argument(
+        "--output-type",
+        choices=["kraken", "bracken", "both"],
+        default="both",
+        help="Specify which output type to generate: kraken, bracken, or both (default)"
+    )
     
     # 2. Preprocess command
     preprocess_parser = subparsers.add_parser("preprocess", help="Run preprocessing only (KneadData)")
@@ -380,68 +206,11 @@ See documentation for more examples and detailed parameter descriptions.
         "--skip-bracken", action="store_true", help="Skip Bracken step"
     )
     classify_parser.add_argument(
-    "--output-type",
-    choices=["kraken", "bracken", "both"],
-    default="both",
-    help="Specify which output type to generate: kraken, bracken, or both (default)"
-)
-
-# Modify the full pipeline command to include proper database validation
-def handle_full_pipeline_command(args):
-    """Handle the 'full-pipeline' command with enhanced error handling."""
-    # Setup logging
-    logger = setup_logger(log_file=args.log_file, log_level=getattr(logging, args.log_level))
-    log_print("Starting full pipeline processing", level="info")
-    
-    # Validate input files
-    if not args.skip_preprocessing and not args.input_fastq:
-        log_print("ERROR: --input-fastq is required for preprocessing", level="error")
-        sys.exit(1)
-    
-    # Validate sample key
-    try:
-        samples, selected_columns = validate_sample_key(args.sample_key, no_interactive=args.no_interactive)
-    except Exception as e:
-        log_print(f"ERROR validating sample key: {str(e)}", level="error")
-        sys.exit(1)
-    
-    # If preprocessing, validate references
-    if not args.skip_preprocessing:
-        # Check KneadData installation
-        kneaddata_ok, kneaddata_msg = check_kneaddata_installation()
-        if not kneaddata_ok:
-            log_print(f"ERROR: KneadData not properly installed: {kneaddata_msg}", level="error")
-            sys.exit(1)
-        
-        # Check KneadData databases if provided
-        if args.kneaddata_dbs:
-            for db_path in args.kneaddata_dbs:
-                if not run_database_diagnostic(db_path, "kneaddata", logger):
-                    log_print(f"ERROR: KneadData database validation failed for {db_path}", level="error")
-                    sys.exit(1)
-    
-    # If classification, validate databases
-    if not args.skip_classification:
-        # Check Kraken installation
-        kraken_ok, kraken_msg = check_kraken_installation()
-        if not kraken_ok:
-            log_print(f"ERROR: Kraken2 not properly installed: {kraken_msg}", level="error")
-            sys.exit(1)
-        
-        # Check Bracken installation
-        bracken_ok, bracken_msg = check_bracken_installation()
-        if not bracken_ok:
-            log_print(f"ERROR: Bracken not properly installed: {bracken_msg}", level="error")
-            sys.exit(1)
-        
-        # Validate databases
-        if not run_database_diagnostic(args.kraken_db, "kraken", logger):
-            log_print(f"ERROR: Kraken database validation failed", level="error")
-            sys.exit(1)
-        
-        if not run_database_diagnostic(args.bracken_db, "bracken", logger):
-            log_print(f"ERROR: Bracken database validation failed", level="error")
-            sys.exit(1)
+        "--output-type",
+        choices=["kraken", "bracken", "both"],
+        default="both",
+        help="Specify which output type to generate: kraken, bracken, or both (default)"
+    )
     
     # 4. Process command
     process_parser = subparsers.add_parser("process", help="Process existing Kraken/Bracken files")
@@ -728,7 +497,7 @@ def handle_full_pipeline_command(args):
             os.makedirs(bracken_dir, exist_ok=True)
             
             # Run Kraken2
-            if not args.skip_kraken:
+            if not args.skip_kraken and (not hasattr(args, 'output_type') or args.output_type != "bracken"):
                 log_print("Starting Kraken2 classification...", level="info")
                 
                 from kraken_tools.preprocessing.kraken_run import run_kraken, run_kraken_parallel
@@ -761,7 +530,7 @@ def handle_full_pipeline_command(args):
                 log_print(f"Kraken2 completed with {len(kreport_files)} reports", level="info")
             
             # Run Bracken
-            if not args.skip_bracken:
+            if not args.skip_bracken and (not hasattr(args, 'output_type') or args.output_type != "kraken"):
                 log_print("Starting Bracken abundance estimation...", level="info")
                 
                 from kraken_tools.preprocessing.bracken_run import run_bracken, run_bracken_parallel
@@ -793,6 +562,206 @@ def handle_full_pipeline_command(args):
                     sys.exit(1)
                 
                 log_print(f"Bracken completed for {len(bracken_results)} samples", level="info")
+        
+        # Process files step
+        abundance_file = None
+        
+        if not args.skip_kraken and not kreport_dir:
+            kreport_dir = os.path.join(taxonomy_dir, "kraken_reports")
+            
+        if not args.skip_bracken and not bracken_dir:
+            bracken_dir = os.path.join(taxonomy_dir, "bracken_output")
+        
+        # Adjust skip flags based on output_type
+        skip_kraken = args.skip_kraken or (hasattr(args, 'output_type') and args.output_type == "bracken")
+        skip_bracken = args.skip_bracken or (hasattr(args, 'output_type') and args.output_type == "kraken")
+        
+        log_print("Processing taxonomic files...", level="info")
+        abundance_file, success = run_full_pipeline(
+            sample_key=args.sample_key,
+            kreport_dir=kreport_dir,
+            bracken_dir=bracken_dir,
+            output_dir=processed_dir,
+            output_prefix=args.output_prefix,
+            taxonomic_level=args.taxonomic_level,
+            group_col=args.group_col,
+            skip_kraken=skip_kraken,
+            skip_bracken=skip_bracken,
+            skip_downstream=args.skip_downstream,
+            min_abundance=args.min_abundance,
+            min_prevalence=args.min_prevalence,
+            no_interactive=args.no_interactive,
+            log_file=args.log_file
+        )
+        
+        if not success:
+            log_print("ERROR: Processing taxonomic files failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"File processing completed. Abundance file: {abundance_file}", level="info")
+        
+        # Run differential abundance analysis if requested
+        if args.run_diff_abundance and abundance_file:
+            log_print("Running differential abundance analysis...", level="info")
+            diff_abundance_dir = os.path.join(args.output_dir, "DifferentialAbundance")
+            os.makedirs(diff_abundance_dir, exist_ok=True)
+            
+            results = run_taxonomic_differential_abundance(
+                abundance_file=abundance_file,
+                sample_key=args.sample_key,
+                output_dir=diff_abundance_dir,
+                group_col=args.group_col,
+                methods="aldex2,ancom,ancom-bc".split(","),
+                min_abundance=args.min_abundance,
+                min_prevalence=args.min_prevalence,
+                log_file=args.log_file
+            )
+            
+            if not results:
+                log_print("WARNING: Differential abundance analysis did not produce results", level="warning")
+    
+    # Handle preprocess command
+    elif args.command == "preprocess":
+        if not args.input_fastq:
+            log_print("ERROR: --input-fastq is required for preprocessing", level="error")
+            sys.exit(1)
+        
+        # Check KneadData installation
+        kneaddata_ok, kneaddata_msg = check_kneaddata_installation()
+        if not kneaddata_ok:
+            log_print(f"ERROR: KneadData not properly installed: {kneaddata_msg}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run preprocessing
+        log_print("Starting preprocessing (KneadData)...", level="info")
+        
+        if args.use_parallel:
+            preprocessing_results = run_preprocessing_pipeline_parallel(
+                input_files=args.input_fastq,
+                output_dir=args.output_dir,
+                threads_per_sample=args.threads_per_sample,
+                max_parallel=args.max_parallel,
+                kneaddata_dbs=args.kneaddata_dbs,
+                paired=args.paired,
+                logger=logger
+            )
+        else:
+            preprocessing_results = run_preprocessing_pipeline(
+                input_files=args.input_fastq,
+                output_dir=args.output_dir,
+                threads=args.threads,
+                kneaddata_dbs=args.kneaddata_dbs,
+                paired=args.paired,
+                logger=logger
+            )
+        
+        if not preprocessing_results:
+            log_print("ERROR: Preprocessing failed", level="error")
+            sys.exit(1)
+        
+        kneaddata_files = preprocessing_results.get('kneaddata_files', [])
+        log_print(f"Preprocessing completed with {len(kneaddata_files)} clean read files", level="info")
+    
+    # Handle classify command
+    elif args.command == "classify":
+        if not args.input_fastq:
+            log_print("ERROR: --input-fastq is required for classification", level="error")
+            sys.exit(1)
+        
+        # Set skip flags based on output_type
+        skip_kraken = args.skip_kraken or (hasattr(args, 'output_type') and args.output_type == "bracken")
+        skip_bracken = args.skip_bracken or (hasattr(args, 'output_type') and args.output_type == "kraken")
+        
+        # Check installations
+        if not skip_kraken:
+            kraken_ok, kraken_msg = check_kraken_installation()
+            if not kraken_ok:
+                log_print(f"ERROR: Kraken2 not properly installed: {kraken_msg}", level="error")
+                sys.exit(1)
+        
+        if not skip_bracken:
+            bracken_ok, bracken_msg = check_bracken_installation()
+            if not bracken_ok:
+                log_print(f"ERROR: Bracken not properly installed: {bracken_msg}", level="error")
+                sys.exit(1)
+        
+        # Create output directories
+        os.makedirs(args.output_dir, exist_ok=True)
+        kreport_dir = os.path.join(args.output_dir, "kraken_reports")
+        bracken_dir = os.path.join(args.output_dir, "bracken_output")
+        os.makedirs(kreport_dir, exist_ok=True)
+        os.makedirs(bracken_dir, exist_ok=True)
+        
+        # Run Kraken2
+        kreport_files = {}
+        if not skip_kraken:
+            log_print("Starting Kraken2 classification...", level="info")
+            
+            from kraken_tools.preprocessing.kraken_run import run_kraken, run_kraken_parallel
+            
+            if args.use_parallel:
+                kraken_results = run_kraken_parallel(
+                    input_files=args.input_fastq,
+                    output_dir=kreport_dir,
+                    threads=args.threads_per_sample,
+                    max_parallel=args.max_parallel,
+                    kraken_db=args.kraken_db,
+                    paired=args.paired,
+                    logger=logger
+                )
+            else:
+                kraken_results = run_kraken(
+                    input_files=args.input_fastq,
+                    output_dir=kreport_dir,
+                    threads=args.threads,
+                    kraken_db=args.kraken_db,
+                    paired=args.paired,
+                    logger=logger
+                )
+            
+            if not kraken_results:
+                log_print("ERROR: Kraken2 classification failed", level="error")
+                sys.exit(1)
+            
+            kreport_files = {sample_id: results['report'] for sample_id, results in kraken_results.items()}
+            log_print(f"Kraken2 completed with {len(kreport_files)} reports", level="info")
+        
+        # Run Bracken
+        if not skip_bracken:
+            log_print("Starting Bracken abundance estimation...", level="info")
+            
+            from kraken_tools.preprocessing.bracken_run import run_bracken, run_bracken_parallel
+            
+            if args.use_parallel:
+                bracken_results = run_bracken_parallel(
+                    kreport_files=kreport_files if kreport_files else None,
+                    output_dir=bracken_dir,
+                    threads=args.threads_per_sample,
+                    max_parallel=args.max_parallel,
+                    bracken_db=args.bracken_db,
+                    taxonomic_level=args.taxonomic_level,
+                    threshold=args.threshold,
+                    logger=logger
+                )
+            else:
+                bracken_results = run_bracken(
+                    kreport_files=kreport_files if kreport_files else None,
+                    output_dir=bracken_dir,
+                    threads=args.threads,
+                    bracken_db=args.bracken_db,
+                    taxonomic_level=args.taxonomic_level,
+                    threshold=args.threshold,
+                    logger=logger
+                )
+            
+            if not bracken_results:
+                log_print("ERROR: Bracken abundance estimation failed", level="error")
+                sys.exit(1)
+            
+            log_print(f"Bracken completed for {len(bracken_results)} samples", level="info")
     
     # Handle process command
     elif args.command == "process":
@@ -1045,206 +1014,3 @@ def handle_full_pipeline_command(args):
 
 if __name__ == "__main__":
     main()
-        elif args.command == "check-db":
-    # Setup logging
-    logger = setup_logger(log_file=args.log_file, log_level=getattr(logging, args.log_level))
-    log_print(f"Starting database check for {args.db_path}", level="info")
-    
-    if run_database_diagnostic(args.db_path, args.db_type, logger):
-        log_print("Database check passed successfully", level="info")
-    else:
-        log_print("Database check failed, please check the logs for details", level="error")
-        sys.exit(1)
-
-
-        # Process files step
-        abundance_file = None
-        
-        if not args.skip_kraken and not kreport_dir:
-            kreport_dir = os.path.join(taxonomy_dir, "kraken_reports")
-            
-        if not args.skip_bracken and not bracken_dir:
-            bracken_dir = os.path.join(taxonomy_dir, "bracken_output")
-        
-        log_print("Processing taxonomic files...", level="info")
-        abundance_file, success = run_full_pipeline(
-            sample_key=args.sample_key,
-            kreport_dir=kreport_dir,
-            bracken_dir=bracken_dir,
-            output_dir=processed_dir,
-            output_prefix=args.output_prefix,
-            taxonomic_level=args.taxonomic_level,
-            group_col=args.group_col,
-            skip_kraken=args.skip_kraken,
-            skip_bracken=args.skip_bracken,
-            skip_downstream=args.skip_downstream,
-            min_abundance=args.min_abundance,
-            min_prevalence=args.min_prevalence,
-            no_interactive=args.no_interactive,
-            log_file=args.log_file
-        )
-        
-        if not success:
-            log_print("ERROR: Processing taxonomic files failed", level="error")
-            sys.exit(1)
-        
-        log_print(f"File processing completed. Abundance file: {abundance_file}", level="info")
-        
-        # Run differential abundance analysis if requested
-        if args.run_diff_abundance and abundance_file:
-            log_print("Running differential abundance analysis...", level="info")
-            diff_abundance_dir = os.path.join(args.output_dir, "DifferentialAbundance")
-            os.makedirs(diff_abundance_dir, exist_ok=True)
-            
-            results = run_taxonomic_differential_abundance(
-                abundance_file=abundance_file,
-                sample_key=args.sample_key,
-                output_dir=diff_abundance_dir,
-                group_col=args.group_col,
-                methods="aldex2,ancom,ancom-bc".split(","),
-                min_abundance=args.min_abundance,
-                min_prevalence=args.min_prevalence,
-                log_file=args.log_file
-            )
-            
-            if not results:
-                log_print("WARNING: Differential abundance analysis did not produce results", level="warning")
-    
-    # Handle preprocess command
-    elif args.command == "preprocess":
-        if not args.input_fastq:
-            log_print("ERROR: --input-fastq is required for preprocessing", level="error")
-            sys.exit(1)
-        
-        # Check KneadData installation
-        kneaddata_ok, kneaddata_msg = check_kneaddata_installation()
-        if not kneaddata_ok:
-            log_print(f"ERROR: KneadData not properly installed: {kneaddata_msg}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run preprocessing
-        log_print("Starting preprocessing (KneadData)...", level="info")
-        
-        if args.use_parallel:
-            preprocessing_results = run_preprocessing_pipeline_parallel(
-                input_files=args.input_fastq,
-                output_dir=args.output_dir,
-                threads_per_sample=args.threads_per_sample,
-                max_parallel=args.max_parallel,
-                kneaddata_dbs=args.kneaddata_dbs,
-                paired=args.paired,
-                logger=logger
-            )
-        else:
-            preprocessing_results = run_preprocessing_pipeline(
-                input_files=args.input_fastq,
-                output_dir=args.output_dir,
-                threads=args.threads,
-                kneaddata_dbs=args.kneaddata_dbs,
-                paired=args.paired,
-                logger=logger
-            )
-        
-        if not preprocessing_results:
-            log_print("ERROR: Preprocessing failed", level="error")
-            sys.exit(1)
-        
-        kneaddata_files = preprocessing_results.get('kneaddata_files', [])
-        log_print(f"Preprocessing completed with {len(kneaddata_files)} clean read files", level="info")
-    
-    # Handle classify command
-    elif args.command == "classify":
-        if not args.input_fastq:
-            log_print("ERROR: --input-fastq is required for classification", level="error")
-            sys.exit(1)
-        
-        # Check installations
-        if not args.skip_kraken:
-            kraken_ok, kraken_msg = check_kraken_installation()
-            if not kraken_ok:
-                log_print(f"ERROR: Kraken2 not properly installed: {kraken_msg}", level="error")
-                sys.exit(1)
-        
-        if not args.skip_bracken:
-            bracken_ok, bracken_msg = check_bracken_installation()
-            if not bracken_ok:
-                log_print(f"ERROR: Bracken not properly installed: {bracken_msg}", level="error")
-                sys.exit(1)
-        
-        # Create output directories
-        os.makedirs(args.output_dir, exist_ok=True)
-        kreport_dir = os.path.join(args.output_dir, "kraken_reports")
-        bracken_dir = os.path.join(args.output_dir, "bracken_output")
-        os.makedirs(kreport_dir, exist_ok=True)
-        os.makedirs(bracken_dir, exist_ok=True)
-        
-        # Run Kraken2
-        kreport_files = {}
-        if not args.skip_kraken:
-            log_print("Starting Kraken2 classification...", level="info")
-            
-            from kraken_tools.preprocessing.kraken_run import run_kraken, run_kraken_parallel
-            
-            if args.use_parallel:
-                kraken_results = run_kraken_parallel(
-                    input_files=args.input_fastq,
-                    output_dir=kreport_dir,
-                    threads=args.threads_per_sample,
-                    max_parallel=args.max_parallel,
-                    kraken_db=args.kraken_db,
-                    paired=args.paired,
-                    logger=logger
-                )
-            else:
-                kraken_results = run_kraken(
-                    input_files=args.input_fastq,
-                    output_dir=kreport_dir,
-                    threads=args.threads,
-                    kraken_db=args.kraken_db,
-                    paired=args.paired,
-                    logger=logger
-                )
-            
-            if not kraken_results:
-                log_print("ERROR: Kraken2 classification failed", level="error")
-                sys.exit(1)
-            
-            kreport_files = {sample_id: results['report'] for sample_id, results in kraken_results.items()}
-            log_print(f"Kraken2 completed with {len(kreport_files)} reports", level="info")
-        
-        # Run Bracken
-        if not args.skip_bracken:
-            log_print("Starting Bracken abundance estimation...", level="info")
-            
-            from kraken_tools.preprocessing.bracken_run import run_bracken, run_bracken_parallel
-            
-            if args.use_parallel:
-                bracken_results = run_bracken_parallel(
-                    kreport_files=kreport_files if kreport_files else None,
-                    output_dir=bracken_dir,
-                    threads=args.threads_per_sample,
-                    max_parallel=args.max_parallel,
-                    bracken_db=args.bracken_db,
-                    taxonomic_level=args.taxonomic_level,
-                    threshold=args.threshold,
-                    logger=logger
-                )
-            else:
-                bracken_results = run_bracken(
-                    kreport_files=kreport_files if kreport_files else None,
-                    output_dir=bracken_dir,
-                    threads=args.threads,
-                    bracken_db=args.bracken_db,
-                    taxonomic_level=args.taxonomic_level,
-                    threshold=args.threshold,
-                    logger=logger
-                )
-            
-            if not bracken_results:
-                log_print("ERROR: Bracken abundance estimation failed", level="error")
-                sys.exit(1)
-            
-            log_print(f"Bracken completed for {len(bracken_results)} samples", level="info")
