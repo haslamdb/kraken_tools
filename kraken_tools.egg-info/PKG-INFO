@@ -1,4 +1,4 @@
-Metadata-Version: 2.2
+Metadata-Version: 2.4
 Name: kraken_tools
 Version: 0.1.0
 Summary: A comprehensive Python package for analyzing taxonomic profiles from Kraken2/Bracken
@@ -33,422 +33,463 @@ Requires-Dist: black>=22.3.0; extra == "dev"
 Requires-Dist: sphinx>=4.4.0; extra == "dev"
 Provides-Extra: kraken
 Requires-Dist: kneaddata; extra == "kraken"
+Dynamic: license-file
 
 # Kraken Tools
 
 A comprehensive Python package for analyzing taxonomic profiles from Kraken2 and Bracken, with tools for data processing, statistical analysis, and visualization.
 
-## Table of Contents
-- [Installation](#installation)
-    - [Conda Environment Setup](#conda-environment-setup)
-    - [Standard Installation](#standard-installation)
-- [Overview](#overview)
-- [Command-Line Usage](#command-line-usage)
-- [Python API Usage](#python-api-usage)
-- [Processing Kraken2/Bracken Files](#processing-kraken2bracken-files)
-- [Downstream Analysis](#downstream-analysis)
-- [Differential Abundance Analysis](#differential-abundance-analysis)
-- [Visualization](#visualization)
-- [Statistical Testing](#statistical-testing)
-- [Advanced Configuration](#advanced-configuration)
-- [Examples](#examples)
-- [Troubleshooting](#troubleshooting)
+## Overview
 
----
+Kraken Tools provides an end-to-end solution for microbiome analysis:
+
+1. **Preprocessing**: Run quality control and host depletion with KneadData
+2. **Taxonomic Classification**: Process sequences through Kraken2 and estimate abundances with Bracken
+3. **Processing**: Merge, normalize, and filter taxonomic abundance data
+4. **Analysis**: Perform statistical tests, differential abundance analysis, and visualization
 
 ## Installation
 
-### Conda Environment Setup
+Kraken Tools offers multiple installation methods to suit different user preferences and environments.
 
-It is **highly recommended** to use a Conda environment to manage the dependencies for `kraken_tools`.
+### Conda Environment Setup (Recommended)
 
-**Steps:**
+It is **highly recommended** to use a dedicated Conda environment to manage the dependencies for `kraken_tools`.
 
-1. **Clone the Repository:**
-   ```bash
-   git clone https://github.com/yourusername/kraken_tools.git
-   cd kraken_tools
-   ```
+#### Option 1: Using the Python Setup Script
 
-2. **Create a Conda Environment:**
-   ```bash
-   conda create -n kraken_tools python=3.12 -y
-   conda activate kraken_tools
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/haslamdb/kraken_tools.git
 
-3. **Install Dependencies:**
-   ```bash
-   conda install -c conda-forge -c bioconda pandas numpy scipy scikit-bio scikit-learn scikit-posthocs statsmodels matplotlib seaborn matplotlib-venn tqdm psutil
-   conda install -c bioconda kraken2 bracken
-   ```
+# Navigate to package directory
+cd kraken_tools 
 
-4. **Install the Package:**
-   ```bash
-   pip install -e .
-   ```
+# Run the setup script
+python conda_setup.py
 
-### Standard Installation
+# Activate the environment
+conda activate kraken-tools
+
+# Verify the installation
+kraken-tools --help
+```
+
+#### Option 2: Using the Shell Script (Unix/Linux/macOS)
+
+```bash
+# Clone the repository
+git clone https://github.com/haslamdb/kraken_tools.git
+cd kraken_tools
+
+# Make the script executable and run it
+chmod +x conda_setup.sh
+./conda_setup.sh
+
+# Activate the environment
+conda activate kraken-tools
+```
+
+#### For Customized Installation
+
+Both setup scripts support various options:
+```bash
+# Example with custom environment name and Python version
+python conda_setup.py --name my-kraken-env --python 3.10
+# Or with shell script
+./conda_setup.sh --name my-kraken-env --python 3.10
+```
+
+### Manual Conda Installation
+
+If you prefer to set up the environment manually:
+
+```bash
+# Clone the repository
+git clone https://github.com/haslamdb/kraken_tools.git
+cd kraken_tools
+
+# Create a Conda environment
+conda create -n kraken-tools python=3.12 -y
+conda activate kraken-tools
+
+# Install dependencies
+conda install -c conda-forge -c bioconda pandas numpy scipy scikit-bio scikit-learn scikit-posthocs statsmodels matplotlib seaborn matplotlib-venn tqdm psutil
+conda install -c bioconda kraken2 bracken kneaddata
+
+# Install the package
+pip install -e .
+```
+
+### Pip Installation
 
 If you prefer not to use Conda, you can install directly using pip:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/kraken_tools.git
+git clone https://github.com/haslamdb/kraken_tools.git
 cd kraken_tools
 
 # Install in development mode
 pip install -e .
 ```
 
-Or install directly using pip (once published to PyPI):
-```bash
-pip install kraken-tools
-```
+**Note**: When using pip, you'll need to manually install Kraken2, Bracken, and KneadData separately.
 
-**Required Dependencies:**
-- pandas
-- numpy
-- scipy
-- scikit-bio
-- scikit-learn
-- scikit-posthocs
-- statsmodels
-- matplotlib
-- seaborn
-- matplotlib-venn
-- tqdm
-- psutil
+### Detailed Installation Instructions
 
-**External Requirements:**
-- Kraken2 and Bracken must be installed separately and available in your PATH
-
----
-
-## Overview
-
-**Kraken Tools** provides an end-to-end solution for taxonomic analysis:
-
-1. **Preprocessing**: Run quality control and host depletion with KneadData
-2. **Taxonomic Classification**: Process raw sequences through Kraken2
-3. **Abundance Estimation**: Estimate abundances with Bracken
-4. **Processing**: Merge, normalize, and filter abundance data
-5. **Downstream Analysis**: Perform statistical tests, visualization, and differential abundance analysis
-
----
+For detailed installation instructions, troubleshooting tips, and advanced options, see the [Installation Guide](install-guide.md).
 
 ## Command-Line Usage
 
-The package provides a command-line tool `kraken-tools` for running the full analysis pipeline.
+Kraken Tools provides a comprehensive set of commands for different stages of microbiome analysis:
 
-### End-to-End Pipeline (Raw Sequences to Analysis)
+### Basic Workflows
+
+| Command | Description |
+|---------|-------------|
+| `full-pipeline` | Run the complete pipeline from raw reads to analysis |
+| `preprocess` | Run only preprocessing (KneadData) for quality control and host depletion |
+| `classify` | Run only taxonomic classification (Kraken2 + Bracken) |
+| `process` | Process existing Kraken/Bracken files without re-running classification |
+| `analyze` | Preliminary group-based analysis on processed abundance data |
+
+### Advanced Analyses
+
+| Command | Description |
+|---------|-------------|
+| `diff-abundance` | Differential abundance testing with multiple methods (ALDEx2, ANCOM, ANCOM-BC) |
+| `glmm` | Generalized Linear Mixed Models for complex experimental designs |
+| `permanova` | Permutational Multivariate Analysis of Variance for community-level differences |
+| `feature-selection` | Random Forest feature importance analysis for microbiome drivers |
+| `rf-shap` | Random Forest with SHAP (SHapley Additive exPlanations) values for interpretable ML |
+| `tsne` | Run t-SNE dimensionality reduction and visualization for community structure analysis |
+
+### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `list-files` | List discovered input files in Kraken/Bracken directories |
+
+### Examples
+
+#### 1. Full Pipeline (Raw Reads to Analysis)
 
 ```bash
-kraken-tools --run-preprocessing --input-fastq reads_1.fastq reads_2.fastq --paired \
+kraken-tools full-pipeline \
+    --input-fastq reads_1.fastq.gz reads_2.fastq.gz \
+    --paired \
     --kneaddata-dbs /path/to/kneaddata_db \
     --kraken-db /path/to/kraken_db \
     --bracken-db /path/to/kraken_db/database150mers.kmer_distrib \
-    --sample-key /path/to/metadata.csv \
-    --output-dir /path/to/output \
+    --sample-key metadata.csv \
+    --output-dir results/ \
     --group-col "Group" \
+    --min-abundance 0.01 \
+    --min-prevalence 0.1 \
     --threads 8
 ```
 
-### Analysis of Existing Kraken2/Bracken Files
+#### 2. Preprocessing Only (KneadData)
 
 ```bash
-# Full pipeline with defaults
-kraken-tools --sample-key /path/to/metadata.csv \
-    --kreport-dir /path/to/kreport_dir \
-    --bracken-dir /path/to/bracken_dir \
-    --output-dir /path/to/output \
+kraken-tools preprocess \
+    --input-fastq reads_1.fastq.gz reads_2.fastq.gz \
+    --paired \
+    --kneaddata-dbs /path/to/kneaddata_db \
+    --output-dir results/preprocessed/ \
+    --threads 8
+```
+
+#### 3. Taxonomic Classification Only (Kraken2 + Bracken)
+
+```bash
+kraken-tools classify \
+    --input-fastq clean_reads.fastq \
+    --kraken-db /path/to/kraken_db \
+    --bracken-db /path/to/kraken_db/database150mers.kmer_distrib \
+    --output-dir results/taxonomy/ \
+    --taxonomic-level S \
+    --threads 8
+```
+
+#### 4. Merge and Filter Kraken/Bracken Files
+
+```bash
+kraken-tools process \
+    --kreport-dir kraken_reports/ \
+    --bracken-dir bracken_files/ \
+    --sample-key metadata.csv \
+    --output-dir results/processed/ \
+    --min-abundance 0.01 \
+    --min-prevalence 0.1
+```
+
+#### 5. Preliminary Group-Based Analysis (Heatmap, PCA, Diversity Metrics, and Statistical Tests)
+
+
+```bash
+kraken-tools analyze \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/analysis/ \
     --group-col "Group"
+```
+
+#### 6. Differential Abundance Testing
+
+```bash
+kraken-tools diff-abundance \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/diff_abundance/ \
+    --group-col "Group" \
+    --methods aldex2,ancom,ancom-bc
+```
+
+#### 7. GLMM Analysis
+
+```bash
+kraken-tools glmm \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/glmm/ \
+    --formula "Count ~ Group + (1|Subject)" \
+    --model negbin
+```
+
+#### 8. PERMANOVA Analysis
+
+```bash
+kraken-tools permanova \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/permanova/ \
+    --categorical-vars "Treatment,TimePoint,DiseaseStatus" \
+    --distance-metric bray \
+    --transform clr \
+    --permutations 999
+```
+
+#### 9. Microbiome-Wide Feature Selection with Random Forest
+
+```bash
+kraken-tools feature-selection \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/feature_selection/ \
+    --predictors "Treatment,TimePoint,Subject,Age,BMI" \
+    --distance-metric bray \
+    --transform clr
+```
+
+#### 10. Organism-Level Feature Selection with Random Forest with SHAP 
+
+```bash
+kraken-tools rf-shap \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/rf_shap/ \
+    --target-taxa "Bacteroides.fragilis,Faecalibacterium.prausnitzii" \
+    --predictors "Treatment,TimePoint,Age" \
+    --random-effects "Subject" \
+    --transform clr
+```
+
+#### 11. t-SNE Visualization
+
+```bash
+kraken-tools tsne \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/tsne/ \
+    --target-taxa "Bacteroides.fragilis,Faecalibacterium.prausnitzii" \
+    --categorical-vars "Treatment,TimePoint" \
+    --transform clr
+```
+
+#### 12. Utility: List Files
+
+```bash
+kraken-tools list-files \
+    --kreport-dir kraken_reports/ \
+    --bracken-dir bracken_files/
 ```
 
 ### Common Options
 
-```bash
-# Skip Kraken or Bracken processing
-kraken-tools --sample-key metadata.csv --kreport-dir kreports/ --bracken-dir bracken/ \
-    --output-dir results/ --skip-kraken
+| Option | Description |
+|--------|-------------|
+| `--log-file FILE` | Path to log file (default: stdout) |
+| `--log-level LEVEL` | Logging level (DEBUG, INFO, WARNING, ERROR) |
+| `--max-memory MB` | Maximum memory usage in MB |
+| `--no-interactive` | Non-interactive mode for sample key selection |
+| `--use-parallel` | Enable parallel processing |
+| `--threads N` | Number of threads to use |
+| `--threads-per-sample N` | Threads per sample in parallel mode |
+| `--max-parallel N` | Maximum samples to process in parallel |
 
-# Skip downstream analysis
-kraken-tools --sample-key metadata.csv --kreport-dir kreports/ --bracken-dir bracken/ \
-    --output-dir results/ --skip-downstream
 
-# Run differential abundance analysis
-kraken-tools --sample-key metadata.csv --kreport-dir kreports/ --bracken-dir bracken/ \
-    --output-dir results/ --run-diff-abundance
+## Sample Key Format
+
+The sample key CSV file should contain:
+
+- A column with sample identifiers matching the file names in the input directories
+- Additional columns for grouping and metadata
+
+**Example**:
+```csv
+SampleName,Group,Treatment,TimePoint,Subject
+sample1,Control,Placebo,Day0,Subject1
+sample2,Treatment,Drug,Day0,Subject2
+sample3,Control,Placebo,Day7,Subject1
+sample4,Treatment,Drug,Day7,Subject2
 ```
 
-### Parallel Processing for Large Datasets
+## Output Structure
 
-```bash
-kraken-tools --run-preprocessing --input-fastq reads_*.fastq --paired \
-    --kneaddata-dbs /path/to/kneaddata_db \
-    --kraken-db /path/to/kraken_db \
-    --bracken-db /path/to/kraken_db/database150mers.kmer_distrib \
-    --sample-key /path/to/metadata.csv \
-    --output-dir /path/to/output \
-    --group-col "Group" \
-    --use-parallel \
-    --threads-per-sample 4 \
-    --max-parallel 8
+The output directory will contain the following structure:
+
 ```
-
----
+output_dir/
+├── PreprocessedData/           # If preprocessing was run
+│   ├── kneaddata_output/       # Clean reads after host removal
+│   └── ...
+├── TaxonomyData/               # If classification was run
+│   ├── kraken_reports/         # Kraken2 reports (.kreport)
+│   └── bracken_output/         # Bracken abundance files
+├── ProcessedData/              # Processed abundance data
+│   ├── KrakenProcessed/        # Processed Kraken reports
+│   ├── BrackenProcessed/       # Processed Bracken files
+│   └── ...
+├── DownstreamAnalysis/         # Analysis results
+│   ├── taxonomy_heatmap.svg    # Taxonomic heatmap
+│   ├── taxonomy_pca.svg        # PCA plot
+│   ├── diversity_metrics.tsv   # Alpha diversity metrics
+│   ├── diversity_boxplots.svg  # Diversity visualizations
+│   ├── StatisticalTests/       # Statistical test results
+│   └── ...
+├── DifferentialAbundance/      # If diff-abundance was run
+│   ├── aldex2_results.csv      # ALDEx2 results
+│   ├── ancom_results.csv       # ANCOM results
+│   ├── ancom_bc_results.csv    # ANCOM-BC results
+│   ├── method_comparison.txt   # Comparison between methods
+│   ├── venn_diagram.png        # Overlap of significant features
+│   └── ...
+└── GLMM/                       # If GLMM was run
+    ├── glmm_results.csv        # Combined GLMM results
+    ├── glmm_coefficients_*.png # Coefficient plots
+    └── glmm_*.txt              # Individual taxon model results
+```
 
 ## Python API Usage
 
-You can also use the Python API for more flexibility and integration with your own scripts.
-
-### Run End-to-End Preprocessing and Analysis
-
-```python
-from kraken_tools import run_preprocessing_and_analysis
-
-results = run_preprocessing_and_analysis(
-    input_fastq=["reads_1.fastq", "reads_2.fastq"],
-    sample_key="metadata.csv",
-    output_dir="results",
-    paired=True,
-    threads=8,
-    kneaddata_dbs="/path/to/kneaddata_db",
-    kraken_db="/path/to/kraken_db",
-    bracken_db="/path/to/bracken_db",
-    group_col="Group"
-)
-```
-
-### Process and Analyze Existing Kraken2/Bracken Files
+You can also use the Python API for more flexibility:
 
 ```python
 from kraken_tools import run_full_pipeline
 
+# Run the complete pipeline
 abundance_file, success = run_full_pipeline(
-    sample_key="/path/to/sample_key.csv",
-    kreport_dir="/path/to/kreport_dir",
-    bracken_dir="/path/to/bracken_dir",
-    output_dir="/path/to/output",
+    sample_key="metadata.csv",
+    kreport_dir="kraken_reports/",
+    bracken_dir="bracken_files/",
+    output_dir="results/",
     group_col="Group",
-    run_diff_abundance=True,
+    min_abundance=0.01,
+    min_prevalence=0.1,
     log_file="kraken_analysis.log"
 )
 
-if success:
-    print("Analysis completed successfully!")
-    print(f"Abundance file: {abundance_file}")
-```
-
-### Processing Files Only
-
-```python
+# Process files only
 from kraken_tools import process_kraken_files_only
 
 abundance_file = process_kraken_files_only(
-    sample_key="/path/to/sample_key.csv",
-    kreport_dir="/path/to/kreport_dir",
-    bracken_dir="/path/to/bracken_dir",
-    output_dir="/path/to/output",
-    log_file="kraken_processing.log"
+    sample_key="metadata.csv",
+    kreport_dir="kraken_reports/",
+    bracken_dir="bracken_files/",
+    output_dir="results/",
+    taxonomic_level="S",
+    log_file="processing.log"
 )
-```
 
-### Running Differential Abundance Analysis
-
-```python
+# Run differential abundance analysis
 from kraken_tools import run_taxonomic_differential_abundance
 
 results = run_taxonomic_differential_abundance(
-    abundance_file="/path/to/abundance_file.tsv",
-    sample_key="/path/to/sample_key.csv",
-    output_dir="/path/to/results",
-    group_col="Treatment",
+    abundance_file="abundance.tsv",
+    sample_key="metadata.csv",
+    output_dir="diff_abundance/",
+    group_col="Group",
     methods=["aldex2", "ancom-bc"],
     min_abundance=0.01,
     min_prevalence=0.1
 )
 
-# Access the results
+# Access results
 if 'aldex2' in results:
     significant = results['aldex2'][results['aldex2']['q_value'] < 0.05]
     print(f"Found {len(significant)} significant features with ALDEx2")
 ```
 
----
+## Statistical Analysis Methods
 
-## Processing Kraken2/Bracken Files
+### Alpha Diversity Metrics
 
-Kraken Tools automates several key processing steps for Kraken2/Bracken output files:
+The following alpha diversity metrics are calculated for each sample:
 
-- **Merging**: Combines files from multiple samples into a single table
-- **Normalization**: Converts abundance values to relative abundance (0-1) or other formats
-- **Filtering**: Removes low-abundance taxa based on thresholds
+- **Richness**: Number of observed taxa
+- **Shannon Index**: Measures both richness and evenness
+- **Simpson Index**: Measures dominance (1 - sum of squared proportions)
+- **Evenness**: Shannon diversity divided by log(richness)
 
-The output directory structure will look like:
+### Statistical Tests
 
-```
-output_dir/
-├── BrackenProcessed/
-│   ├── ProcessedFiles_bracken_s_merged.tsv
-│   └── ProcessedFiles_bracken_s_relabundance.tsv
-├── KrakenProcessed/
-│   ├── ProcessedFiles_kraken_s_merged.tsv
-│   └── ProcessedFiles_kraken_s_relabundance.tsv
-└── ...
-```
+- **Kruskal-Wallis Test**: Non-parametric alternative to ANOVA for comparing across multiple groups
+- **Dunn's Post-hoc Test**: For pairwise comparisons following significant Kruskal-Wallis results
 
----
+### Differential Abundance Methods
 
-## Downstream Analysis
+- **ALDEx2**: Uses a Dirichlet-multinomial model to account for compositional data
+  - Only works with two-group comparisons
+  - Features with q-value < 0.05 are considered significant
 
-The downstream analysis module performs several types of analyses on the processed data:
+- **ANCOM**: Analysis of Composition of Microbiomes, based on log-ratio testing
+  - Works with multiple groups
+  - Features with W-ratio > 0.7 are considered significant
 
-- **Taxonomic Visualizations**: Heatmaps, bar plots, etc.
-- **Principal Component Analysis (PCA)**: Visualizes similarities between samples
-- **Diversity Metrics**: Alpha diversity metrics (Richness, Shannon, Simpson, etc.)
-- **Statistical Tests**: Performs Kruskal-Wallis tests followed by Dunn's post-hoc tests
-- **Differential Abundance Analysis**: Identifies significantly different taxa between groups
+- **ANCOM-BC**: ANCOM with bias correction
+  - Works with multiple groups
+  - Features with q-value < 0.05 are considered significant
 
-Results are organized in the `DownstreamAnalysis` directory:
+### GLMM Analysis
 
-```
-output_dir/
-├── DownstreamAnalysis/
-│   ├── taxonomy_heatmap.svg
-│   ├── taxonomy_pca.svg
-│   ├── taxonomy_bars_by_group.svg
-│   ├── diversity_metrics.tsv
-│   ├── diversity_boxplots.svg
-│   ├── StatisticalTests/
-│   │   ├── kruskal_wallis_results.csv
-│   │   ├── significant_comparisons.csv
-│   │   └── dunn_posthoc_tests/
-│   │       ├── dunn_taxon1.csv
-│   │       ├── dunn_taxon2.csv
-│   │       └── ...
-│   └── ...
-└── ...
-```
+The GLMM (Generalized Linear Mixed Model) module supports:
 
----
+- **Zero-inflated Poisson models**: For count data with excess zeros
+- **Zero-inflated Negative Binomial models**: For overdispersed count data
+- **Mixed effects**: Inclusion of random effects for nested/repeated measures design
+- **Multiple testing correction**: FDR correction for multiple taxa
 
-## Differential Abundance Analysis
-
-Kraken Tools includes implementations of three popular differential abundance methods:
-
-- **ALDEx2**: Uses a Dirichlet-multinomial model to account for compositional data; works only with two-group comparisons
-- **ANCOM**: Analysis of Composition of Microbiomes, based on log-ratio testing; works with multiple groups
-- **ANCOM-BC**: ANCOM with bias correction, addressing limitations of the original ANCOM; works with multiple groups
-
-### Running Differential Abundance Analysis
-
-```bash
-# Basic usage
-kraken-tools --sample-key samples.csv --kreport-dir kreports/ --bracken-dir bracken/ \
-    --output-dir results/ --group-col Group --run-diff-abundance
-
-# Specify methods
-kraken-tools --sample-key samples.csv --kreport-dir kreports/ --bracken-dir bracken/ \
-    --output-dir results/ --group-col Group --run-diff-abundance \
-    --diff-methods aldex2,ancom
-```
-
-### Output Files
-
-Differential abundance analysis produces the following files in `output_dir/DifferentialAbundance/`:
-
-- `aldex2_results.csv`: Results from ALDEx2 analysis
-- `ancom_results.csv`: Results from ANCOM
-- `ancom_bc_results.csv`: Results from ANCOM-BC
-- `method_comparison.txt`: Comparison of significant features across methods
-- `venn_diagram.png`: Venn diagram showing overlap of significant features
-- `aldex2_volcano.png`: Volcano plot of ALDEx2 results
-- `ancom_top_features.png`: Bar plot of top features by ANCOM W-ratio
-
-### Interpreting Results
-
-- **ALDEx2**: Features with *q-value* < 0.05 are considered significant
-- **ANCOM**: Features with *W-ratio* > 0.7 are considered significant
-- **ANCOM-BC**: Features with *q-value* < 0.05 are considered significant
-
----
-
-## Visualization
-
-Kraken Tools generates several visualization types:
+## Visualization Types
 
 - **Heatmaps**: Show taxonomic abundances across samples with clustering
-- **PCA Plots**: Show the relationships between samples based on their taxonomic profiles
+- **PCA Plots**: Visualize relationships between samples based on taxonomic profiles
 - **Bar Plots**: Display taxonomic composition by group
 - **Diversity Plots**: Visualize alpha diversity metrics across samples
 - **Volcano Plots**: Show effect size vs. significance for differentially abundant taxa
 - **Venn Diagrams**: Show overlap of significant features identified by different methods
+- **Coefficient Plots**: Visualize effect sizes from GLMM analysis
 
----
+## Filtering Parameters
 
-## Statistical Testing
+- **min_abundance**: Minimum relative abundance threshold (default: 0.01 = 1%)
+  - Filters out taxa with mean abundance below this threshold
+  - Helps remove rare taxa that may introduce noise
 
-### Kruskal-Wallis Test
-
-A non-parametric alternative to ANOVA for comparing taxa abundance across multiple groups. Results include:
-
-- Test statistic
-- p-value
-- Adjusted p-value (q-value) using Benjamini-Hochberg FDR correction
-- Binary indicator of significance (Reject_H0)
-
-### Dunn's Post-hoc Test
-
-For taxa with significant Kruskal-Wallis results, a Dunn's post-hoc test identifies which specific group pairs differ significantly.
-
----
-
-## Advanced Configuration
-
-### Sample Key Format
-
-The sample key CSV file should contain:
-
-- A column with sample identifiers matching the file names in the input directories
-- Additional columns for grouping and other metadata
-
-**Example**:
-```csv
-SampleName,Group,Treatment,TimePoint
-sample1,Control,Placebo,Day0
-sample2,Treatment,Drug,Day0
-sample3,Control,Placebo,Day7
-```
-
-### Filtering Low-abundance Taxa
-
-You can filter low-abundance taxa based on abundance and prevalence thresholds:
-
-```bash
-# Filter taxa with < 1% mean abundance or present in < 10% of samples
-kraken-tools --sample-key metadata.csv --bracken-dir bracken/ \
-    --output-dir results/ --min-abundance 0.01 --min-prevalence 0.1
-```
-
-### Taxonomic Level Selection
-
-Specify the taxonomic level for analysis (S=species, G=genus, etc.):
-
-```bash
-# Analyze at genus level
-kraken-tools --sample-key metadata.csv --bracken-dir bracken/ \
-    --output-dir results/ --taxonomic-level G
-```
-
-### Customizing Output
-
-```bash
-# Use custom output prefix and directory structure
-kraken-tools --sample-key metadata.csv --bracken-dir bracken/ \
-    --output-dir my_analysis --output-prefix MyPrefix
-```
-
----
+- **min_prevalence**: Minimum prevalence threshold (default: 0.1 = 10%)
+  - Filters out taxa present in fewer than this proportion of samples
+  - Helps focus on consistently detected taxa
 
 ## Examples
 
@@ -456,8 +497,9 @@ kraken-tools --sample-key metadata.csv --bracken-dir bracken/ \
 
 ```bash
 # Process Bracken files and run standard downstream analysis
-kraken-tools --sample-key metadata.csv \
+kraken-tools process \
     --bracken-dir bracken_files/ \
+    --sample-key metadata.csv \
     --output-dir results/ \
     --group-col "DiseaseStatus"
 ```
@@ -466,10 +508,10 @@ kraken-tools --sample-key metadata.csv \
 
 ```bash
 # Process raw sequence files through KneadData, Kraken2, Bracken
-kraken-tools --run-preprocessing \
+kraken-tools full-pipeline \
     --input-fastq sample1_R1.fastq.gz sample1_R2.fastq.gz sample2_R1.fastq.gz sample2_R2.fastq.gz \
     --paired \
-    --kneaddata-dbs /path/to/human_db /path/to/contaminants_db \
+    --kneaddata-dbs /path/to/human_db \
     --kraken-db /path/to/kraken_db \
     --bracken-db /path/to/kraken_db/database150mers.kmer_distrib \
     --sample-key metadata.csv \
@@ -481,23 +523,34 @@ kraken-tools --run-preprocessing \
 ### Example 3: Focused Differential Abundance Analysis
 
 ```bash
-# Run only specific differential abundance methods, examining genus level
-kraken-tools --sample-key metadata.csv \
-    --bracken-dir bracken_files/ \
+# Run only specific differential abundance methods at genus level
+kraken-tools diff-abundance \
+    --abundance-file abundance.tsv \
+    --sample-key metadata.csv \
     --output-dir results/ \
-    --taxonomic-level G \
     --group-col "DiseaseStatus" \
-    --run-diff-abundance \
-    --diff-methods aldex2,ancom-bc \
+    --methods aldex2,ancom-bc \
     --min-abundance 0.001 \
     --min-prevalence 0.2
 ```
 
-### Example 4: Parallel Processing for Large Dataset
+### Example 4: GLMM with Repeated Measures
+
+```bash
+# Run GLMM analysis with Subject as random effect
+kraken-tools glmm \
+    --abundance-file abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/glmm/ \
+    --formula "Count ~ Group + TimePoint + (1|Subject)" \
+    --model negbin
+```
+
+### Example 5: Parallel Processing for Large Dataset
 
 ```bash
 # Process large dataset with parallel execution
-kraken-tools --run-preprocessing \
+kraken-tools full-pipeline \
     --input-fastq sample*_R*.fastq.gz \
     --paired \
     --kneaddata-dbs /path/to/human_db \
@@ -509,8 +562,6 @@ kraken-tools --run-preprocessing \
     --threads-per-sample 4 \
     --max-parallel 6
 ```
-
----
 
 ## Troubleshooting
 
@@ -540,16 +591,15 @@ If you encounter issues not covered in this documentation, please:
 - Set `--log-level DEBUG` for more verbose output
 - Open an issue on the GitHub repository with a description of the problem and relevant log entries
 
----
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
 ## Citation
 
 If you use Kraken Tools in your research, please cite:
 
 - The original Kraken2 paper: Wood DE, Lu J, Langmead B. Improved metagenomic analysis with Kraken 2. Genome Biol. 2019;20:257.
 - Bracken: Lu J, Breitwieser FP, Thielen P, Salzberg SL. Bracken: estimating species abundance in metagenomics data. PeerJ Comput Sci. 2017;3:e104.
-- This tool: [Your Name]. (2025). Kraken Tools: A comprehensive framework for taxonomic analysis.
+- KneadData: McIver LJ, et al. bioBakery: a meta'omic analysis environment. Bioinformatics. 2018;34(7):1235-1237.
+- This tool: Haslam D. (2025). Kraken Tools: A comprehensive framework for taxonomic analysis.
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
