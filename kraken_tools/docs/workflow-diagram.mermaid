@@ -1,0 +1,69 @@
+flowchart TD
+    subgraph Inputs
+        A1[Raw Reads\n*.fastq/*.fastq.gz] --> B1
+        A2[Sample Metadata\nmetadata.csv] --> C1
+    end
+
+    subgraph "Step 1: Preprocessing with KneadData"
+        B1[KneadData\nQC and Host Depletion] --> B2[Clean Reads]
+    end
+
+    subgraph "Step 2: Taxonomic Classification"
+        B2 --> C1[Kraken2\nTaxonomic Assignment]
+        C1 --> C2[kreport Files]
+        C2 --> C3[Bracken\nAbundance Estimation]
+        C3 --> C4[Bracken Abundance Files]
+    end
+
+    subgraph "Step 3: Data Processing"
+        C2 --> D1[Merge kreport Files]
+        C4 --> D2[Merge Bracken Files]
+        D1 --> D3[Normalize and Filter\nAbundance Tables]
+        D2 --> D3
+        D3 --> D4[Processed\nAbundance Data]
+    end
+
+    subgraph "Step 4: Exploratory Analysis"
+        D4 --> E1[Alpha Diversity\nShannon, Simpson, etc.]
+        D4 --> E2[Beta Diversity\nPCA/PCoA Analysis]
+        D4 --> E3[Taxonomic Visualization\nHeatmaps, Barplots]
+    end
+
+    subgraph "Step 5: Differential Analysis"
+        D4 --> F1[PERMANOVA\nCommunity-Level Differences]
+        D4 --> F2[Differential Abundance\nALDEx2, ANCOM, ANCOM-BC]
+        D4 --> F3[Feature Selection\nRandom Forest Importance]
+    end
+
+    subgraph "Step 6: Advanced Modeling"
+        D4 --> G1[GLMM\nGeneralized Linear Mixed Models]
+        D4 --> G2[RF-SHAP\nRandom Forest with SHAP]
+    end
+
+    %% Command-line relationships
+    CMD1["kraken-tools full-pipeline"] --- A1
+    CMD1 --- G2
+    
+    CMD2["kraken-tools preprocess"] --- B1
+    CMD3["kraken-tools classify"] --- C1
+    CMD4["kraken-tools process"] --- D3
+    CMD5["kraken-tools analyze"] --- E3
+    CMD6["kraken-tools diff-abundance"] --- F2
+    CMD7["kraken-tools permanova"] --- F1
+    CMD8["kraken-tools feature-selection"] --- F3
+    CMD9["kraken-tools glmm"] --- G1
+    CMD10["kraken-tools rf-shap"] --- G2
+
+    %% Style commands
+    classDef commandStyle fill:#f9f,stroke:#333,stroke-width:2px
+    class CMD1,CMD2,CMD3,CMD4,CMD5,CMD6,CMD7,CMD8,CMD9,CMD10 commandStyle
+    
+    %% Style data/steps
+    classDef dataStyle fill:#e6f3ff,stroke:#333,stroke-width:1px
+    class A1,A2,B2,C2,C4,D4 dataStyle
+    
+    classDef stepStyle fill:#ccffcc,stroke:#333,stroke-width:1px
+    class B1,C1,C3,D1,D2,D3 stepStyle
+    
+    classDef analysisStyle fill:#ffeecc,stroke:#333,stroke-width:1px
+    class E1,E2,E3,F1,F2,F3,G1,G2 analysisStyle

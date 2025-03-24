@@ -14,6 +14,10 @@ from kraken_tools.preprocessing.kneaddata import check_kneaddata_installation
 from kraken_tools.preprocessing.kraken_run import check_kraken_installation
 from kraken_tools.preprocessing.bracken_run import check_bracken_installation
 from kraken_tools.preprocessing.pipeline import run_preprocessing_pipeline, run_preprocessing_pipeline_parallel
+from kraken_tools.analysis.permanova import run_permanova_analysis
+from kraken_tools.analysis.feature_selection import run_feature_selection
+from kraken_tools.analysis.rf_shap import run_rf_shap_analysis
+
 
 
 def main():
@@ -156,6 +160,101 @@ def main():
         "--use-parallel", action="store_true", help="Use parallel processing for preprocessing steps"
     )
 
+
+    # 8. PERMANOVA command
+    permanova_parser = subparsers.add_parser("permanova", help="Run PERMANOVA analysis")
+    permanova_parser = setup_common_args(permanova_parser)
+    permanova_parser = setup_input_output_args(permanova_parser)
+    permanova_parser = setup_analysis_args(permanova_parser)
+    permanova_parser.add_argument(
+        "--abundance-file", required=True, help="Path to abundance file"
+    )
+    permanova_parser.add_argument(
+        "--categorical-vars", help="Comma-separated list of categorical variables to test"
+    )
+    permanova_parser.add_argument(
+        "--distance-metric", default="bray", choices=["bray", "jaccard", "euclidean"],
+        help="Distance metric to use"
+    )
+    permanova_parser.add_argument(
+        "--transform", default="clr", choices=["clr", "hellinger", "log", "none"],
+        help="Transformation to apply to abundance data"
+    )
+    permanova_parser.add_argument(
+        "--permutations", type=int, default=999, help="Number of permutations"
+    )
+    permanova_parser.add_argument(
+        "--min-group-size", type=int, default=3, help="Minimum number of samples per group"
+    )
+    permanova_parser.add_argument(
+        "--make-pcoa", action="store_true", default=True, help="Generate PCoA plots"
+    )
+
+    # 9. Feature Selection command
+    feature_selection_parser = subparsers.add_parser("feature-selection", help="Run Random Forest feature selection")
+    feature_selection_parser = setup_common_args(feature_selection_parser)
+    feature_selection_parser = setup_input_output_args(feature_selection_parser)
+    feature_selection_parser = setup_analysis_args(feature_selection_parser)
+    feature_selection_parser.add_argument(
+        "--abundance-file", required=True, help="Path to abundance file"
+    )
+    feature_selection_parser.add_argument(
+        "--predictors", help="Comma-separated list of predictor variables"
+    )
+    feature_selection_parser.add_argument(
+        "--n-estimators", type=int, default=100, help="Number of trees in Random Forest"
+    )
+    feature_selection_parser.add_argument(
+        "--distance-metric", default="bray", choices=["bray", "jaccard", "euclidean"],
+        help="Distance metric to use"
+    )
+    feature_selection_parser.add_argument(
+        "--transform", default="clr", choices=["clr", "hellinger", "log", "none"],
+        help="Transformation to apply to abundance data"
+    )
+    feature_selection_parser.add_argument(
+        "--test-size", type=float, default=0.2, help="Proportion of data for testing"
+    )
+    feature_selection_parser.add_argument(
+        "--random-state", type=int, default=42, help="Random seed for reproducibility"
+    )
+
+    # 10. RF-SHAP command
+    rf_shap_parser = subparsers.add_parser("rf-shap", help="Run Random Forest with SHAP analysis")
+    rf_shap_parser = setup_common_args(rf_shap_parser)
+    rf_shap_parser = setup_input_output_args(rf_shap_parser)
+    rf_shap_parser = setup_analysis_args(rf_shap_parser)
+    rf_shap_parser.add_argument(
+        "--abundance-file", required=True, help="Path to abundance file"
+    )
+    rf_shap_parser.add_argument(
+        "--target-taxa", help="Comma-separated list of taxa to analyze"
+    )
+    rf_shap_parser.add_argument(
+        "--predictors", help="Comma-separated list of predictor variables"
+    )
+    rf_shap_parser.add_argument(
+        "--random-effects", help="Comma-separated list of random effect variables"
+    )
+    rf_shap_parser.add_argument(
+        "--transform", default="clr", choices=["clr", "hellinger", "log", "none"],
+        help="Transformation to apply to abundance data"
+    )
+    rf_shap_parser.add_argument(
+        "--n-estimators", type=int, default=100, help="Number of trees in Random Forest"
+    )
+    rf_shap_parser.add_argument(
+        "--test-size", type=float, default=0.2, help="Proportion of data for testing"
+    )
+    rf_shap_parser.add_argument(
+        "--top-n", type=int, default=10, help="Number of top taxa to analyze if target-taxa not specified"
+    )
+    rf_shap_parser.add_argument(
+        "--mixed-model", default="lmer", choices=["lmer", "glmm"],
+        help="Type of mixed model to use"
+    )
+
+
     args = parser.parse_args()
 
     # Setup logging
@@ -281,6 +380,111 @@ def main():
     # Here we would add the processing steps for Kraken/Bracken files
     # and downstream analysis similar to how it's done in humann3_tools
     # ...
+
+
+    elif args.command == "permanova":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for PERMANOVA analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run PERMANOVA analysis
+        log_print("Running PERMANOVA analysis...", level="info")
+        results = run_permanova_analysis(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            categorical_vars=args.categorical_vars,
+            group_col=args.group_col,
+            distance_metric=args.distance_metric,
+            transform=args.transform,
+            permutations=args.permutations,
+            min_group_size=args.min_group_size,
+            make_pcoa=args.make_pcoa,
+            log_file=args.log_file
+        )
+        
+        if not results:
+            log_print("ERROR: PERMANOVA analysis failed", level="error")
+            sys.exit(1)
+        
+        sig_count = sum(1 for r in results.values() if r['p_value'] < 0.05)
+        log_print(f"PERMANOVA analysis completed with {sig_count} significant variables", level="info")
+
+    elif args.command == "feature-selection":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for feature selection", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run feature selection
+        log_print("Running Random Forest feature selection...", level="info")
+        results = run_feature_selection(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            predictors=args.predictors,
+            n_estimators=args.n_estimators,
+            distance_metric=args.distance_metric,
+            transform=args.transform,
+            test_size=args.test_size,
+            random_state=args.random_state,
+            log_file=args.log_file
+        )
+        
+        if results is None:
+            log_print("ERROR: Feature selection failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"Feature selection completed with {len(results)} ranked features", level="info")
+
+    elif args.command == "rf-shap":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for RF-SHAP analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run RF-SHAP analysis
+        log_print("Running Random Forest with SHAP analysis...", level="info")
+        results = run_rf_shap_analysis(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            target_taxa=args.target_taxa,
+            predictors=args.predictors,
+            random_effects=args.random_effects,
+            transform=args.transform,
+            n_estimators=args.n_estimators,
+            test_size=args.test_size,
+            top_n=args.top_n,
+            mixed_model=args.mixed_model,
+            log_file=args.log_file
+        )
+        
+        if not results:
+            log_print("ERROR: RF-SHAP analysis failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"RF-SHAP analysis completed for {len(results)} taxa", level="info")
+
 
     elapsed = time.time() - start_time
     hh, rr = divmod(elapsed, 3600)
