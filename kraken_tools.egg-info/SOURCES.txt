@@ -1,6 +1,12 @@
 LICENSE
 README.md
 pyproject.toml
+./kraken_tools/__init__.py
+./kraken_tools/cli.py
+./kraken_tools/logger.py
+./kraken_tools/main.py
+./kraken_tools/parallel.py
+./kraken_tools/pipeline.py
 kraken_tools/__init__.py
 kraken_tools/cli.py
 kraken_tools/logger.py

@@ -1,16 +1,23 @@
 Metadata-Version: 2.4
-Name: kraken_tools
+Name: kraken-tools
 Version: 0.1.0
-Summary: A comprehensive Python package for analyzing taxonomic profiles from Kraken2/Bracken
-Author-email: Your Name <your.email@example.com>
+Summary: A comprehensive Python package for analyzing taxonomic profiles from Kraken2 and Bracken, with tools for data processing, statistical analysis, and visualization
+Author-email: David Haslam <dhaslam@gmail.com>
+Maintainer-email: David Haslam <dhaslam@gmail.com>
 License: MIT
-Project-URL: Homepage, https://github.com/yourusername/kraken_tools
-Project-URL: Bug Tracker, https://github.com/yourusername/kraken_tools/issues
-Classifier: Programming Language :: Python :: 3
-Classifier: License :: OSI Approved :: MIT License
-Classifier: Operating System :: OS Independent
-Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Project-URL: Homepage, https://github.com/haslamdb/kraken_tools
+Project-URL: Bug Tracker, https://github.com/haslamdb/kraken_tools/issues
+Project-URL: Documentation, https://github.com/haslamdb/kraken_tools/blob/main/README.md
+Keywords: microbiome,metagenomics,kraken2,bracken,kneaddata,bioinformatics
+Classifier: Development Status :: 4 - Beta
 Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
 Requires-Python: >=3.9
 Description-Content-Type: text/markdown
 License-File: LICENSE
