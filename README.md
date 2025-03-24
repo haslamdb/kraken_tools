@@ -11,10 +11,6 @@ Kraken Tools provides an end-to-end solution for microbiome analysis:
 3. **Processing**: Merge, normalize, and filter taxonomic abundance data
 4. **Analysis**: Perform statistical tests, differential abundance analysis, and visualization
 
-## Workflow
-
-![Kraken Tools Workflow](workflow-diagram.png)
-
 ## Installation
 
 ### Conda Environment Setup (Recommended)
