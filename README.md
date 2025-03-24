@@ -43,7 +43,37 @@ pip install kraken-tools
 
 ## Command-Line Usage
 
-### 1. Full Pipeline (Raw Reads to Analysis)
+Kraken Tools provides a comprehensive set of commands for different stages of microbiome analysis:
+
+### Basic Workflows
+
+| Command | Description |
+|---------|-------------|
+| `full-pipeline` | Run the complete pipeline from raw reads to analysis |
+| `preprocess` | Run only preprocessing (KneadData) for quality control and host depletion |
+| `classify` | Run only taxonomic classification (Kraken2 + Bracken) |
+| `process` | Process existing Kraken/Bracken files without re-running classification |
+| `analyze` | Run downstream analysis on processed abundance data |
+
+### Advanced Analyses
+
+| Command | Description |
+|---------|-------------|
+| `diff-abundance` | Differential abundance testing with multiple methods (ALDEx2, ANCOM, ANCOM-BC) |
+| `glmm` | Generalized Linear Mixed Models for complex experimental designs |
+| `permanova` | Permutational Multivariate Analysis of Variance for community-level differences |
+| `feature-selection` | Random Forest feature importance analysis for microbiome drivers |
+| `rf-shap` | Random Forest with SHAP (SHapley Additive exPlanations) values for interpretable ML |
+
+### Utilities
+
+| Command | Description |
+|---------|-------------|
+| `list-files` | List discovered input files in Kraken/Bracken directories |
+
+### Examples
+
+#### 1. Full Pipeline (Raw Reads to Analysis)
 
 ```bash
 kraken-tools full-pipeline \
@@ -60,7 +90,7 @@ kraken-tools full-pipeline \
     --threads 8
 ```
 
-### 2. Preprocessing Only (KneadData)
+#### 2. Preprocessing Only (KneadData)
 
 ```bash
 kraken-tools preprocess \
@@ -71,7 +101,7 @@ kraken-tools preprocess \
     --threads 8
 ```
 
-### 3. Taxonomic Classification Only (Kraken2 + Bracken)
+#### 3. Taxonomic Classification Only (Kraken2 + Bracken)
 
 ```bash
 kraken-tools classify \
@@ -83,7 +113,7 @@ kraken-tools classify \
     --threads 8
 ```
 
-### 4. Process Existing Kraken/Bracken Files
+#### 4. Process Existing Kraken/Bracken Files
 
 ```bash
 kraken-tools process \
@@ -95,7 +125,9 @@ kraken-tools process \
     --min-prevalence 0.1
 ```
 
-### 5. Downstream Analysis
+#### 5. Preliminary Group-Based Analysis
+####    Heatmap, PCA, Diversity Metrics, and Statistical Tests
+
 
 ```bash
 kraken-tools analyze \
@@ -105,7 +137,7 @@ kraken-tools analyze \
     --group-col "Group"
 ```
 
-### 6. Differential Abundance Testing
+#### 6. Differential Abundance Testing
 
 ```bash
 kraken-tools diff-abundance \
@@ -116,7 +148,7 @@ kraken-tools diff-abundance \
     --methods aldex2,ancom,ancom-bc
 ```
 
-### 7. GLMM Analysis
+#### 7. GLMM Analysis
 
 ```bash
 kraken-tools glmm \
@@ -127,7 +159,45 @@ kraken-tools glmm \
     --model negbin
 ```
 
-### 8. Utility: List Files
+#### 8. PERMANOVA Analysis
+
+```bash
+kraken-tools permanova \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/permanova/ \
+    --categorical-vars "Treatment,TimePoint,DiseaseStatus" \
+    --distance-metric bray \
+    --transform clr \
+    --permutations 999
+```
+
+#### 9. Feature Selection with Random Forest
+
+```bash
+kraken-tools feature-selection \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/feature_selection/ \
+    --predictors "Treatment,TimePoint,Subject,Age,BMI" \
+    --distance-metric bray \
+    --transform clr
+```
+
+#### 10. Random Forest with SHAP Analysis
+
+```bash
+kraken-tools rf-shap \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/rf_shap/ \
+    --target-taxa "Bacteroides.fragilis,Faecalibacterium.prausnitzii" \
+    --predictors "Treatment,TimePoint,Age" \
+    --random-effects "Subject" \
+    --transform clr
+```
+
+#### 11. Utility: List Files
 
 ```bash
 kraken-tools list-files \
@@ -135,7 +205,7 @@ kraken-tools list-files \
     --bracken-dir bracken_files/
 ```
 
-## Common Options
+### Common Options
 
 | Option | Description |
 |--------|-------------|
@@ -147,6 +217,7 @@ kraken-tools list-files \
 | `--threads N` | Number of threads to use |
 | `--threads-per-sample N` | Threads per sample in parallel mode |
 | `--max-parallel N` | Maximum samples to process in parallel |
+
 
 ## Sample Key Format
 

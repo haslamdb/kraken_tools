@@ -20,25 +20,15 @@ from kraken_tools.main import (
     analyze_existing_kraken_files,
     run_taxonomic_differential_abundance
 )
-
-def setup_common_args(parser):
-    """Add common arguments to a parser."""
-    parser.add_argument("--log-file", default=None, help="Path to log file")
-    parser.add_argument(
 from kraken_tools.analysis.permanova import run_permanova_analysis
 from kraken_tools.analysis.feature_selection import run_feature_selection
 from kraken_tools.analysis.rf_shap import run_rf_shap_analysis
 
 
-
-def main():
-    """Main entry point for the kraken_tools CLI."""
-    parser = argparse.ArgumentParser(description="Kraken Tools: Process and analyze Kraken2/Bracken taxonomic output")
-
-    # --- 1. Global Options ---
-    global_group = parser.add_argument_group("Global Options")
-    global_group.add_argument("--log-file", default=None, help="Path to combined log file")
-    global_group.add_argument(
+def setup_common_args(parser):
+    """Add common arguments to a parser."""
+    parser.add_argument("--log-file", default=None, help="Path to log file")
+    parser.add_argument(
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -52,6 +42,7 @@ def main():
     )
     return parser
 
+
 def setup_input_output_args(parser):
     """Add input/output arguments to a parser."""
     parser.add_argument("--output-dir", required=True, help="Directory for output files")
@@ -61,6 +52,7 @@ def setup_input_output_args(parser):
         help="Prefix for intermediate output files",
     )
     return parser
+
 
 def setup_preprocessing_args(parser):
     """Add preprocessing arguments to a parser."""
@@ -75,6 +67,7 @@ def setup_preprocessing_args(parser):
         "--threads", type=int, default=1, help="Number of threads to use"
     )
     return parser
+
 
 def setup_kraken_args(parser):
     """Add Kraken/Bracken arguments to a parser."""
@@ -98,6 +91,7 @@ def setup_kraken_args(parser):
     )
     return parser
 
+
 def setup_analysis_args(parser):
     """Add analysis arguments to a parser."""
     parser.add_argument("--sample-key", required=True, help="CSV file with sample metadata")
@@ -114,6 +108,7 @@ def setup_analysis_args(parser):
     )
     return parser
 
+
 def setup_diff_abundance_args(parser):
     """Add differential abundance arguments to a parser."""
     parser.add_argument(
@@ -122,6 +117,7 @@ def setup_diff_abundance_args(parser):
         help="Comma-separated list of methods (default: aldex2,ancom,ancom-bc)",
     )
     return parser
+
 
 def setup_parallel_args(parser):
     """Add parallel processing arguments to a parser."""
@@ -135,6 +131,7 @@ def setup_parallel_args(parser):
         "--use-parallel", action="store_true", help="Use parallel processing"
     )
     return parser
+
 
 def main():
     """Main entry point for the kraken_tools CLI."""
@@ -262,16 +259,7 @@ See documentation for more examples and detailed parameter descriptions.
     list_files_parser.add_argument("--kreport-dir", help="Directory containing Kraken2 report files")
     list_files_parser.add_argument("--bracken-dir", help="Directory containing Bracken abundance files")
     
-    # Parse arguments
-    parallel_group.add_argument(
-        "--max-parallel", type=int, default=None, help="Maximum number of samples to process in parallel"
-    )
-    parallel_group.add_argument(
-        "--use-parallel", action="store_true", help="Use parallel processing for preprocessing steps"
-    )
-
-
-    # 8. PERMANOVA command
+    # 9. PERMANOVA command
     permanova_parser = subparsers.add_parser("permanova", help="Run PERMANOVA analysis")
     permanova_parser = setup_common_args(permanova_parser)
     permanova_parser = setup_input_output_args(permanova_parser)
@@ -300,7 +288,7 @@ See documentation for more examples and detailed parameter descriptions.
         "--make-pcoa", action="store_true", default=True, help="Generate PCoA plots"
     )
 
-    # 9. Feature Selection command
+    # 10. Feature Selection command
     feature_selection_parser = subparsers.add_parser("feature-selection", help="Run Random Forest feature selection")
     feature_selection_parser = setup_common_args(feature_selection_parser)
     feature_selection_parser = setup_input_output_args(feature_selection_parser)
@@ -329,7 +317,7 @@ See documentation for more examples and detailed parameter descriptions.
         "--random-state", type=int, default=42, help="Random seed for reproducibility"
     )
 
-    # 10. RF-SHAP command
+    # 11. RF-SHAP command
     rf_shap_parser = subparsers.add_parser("rf-shap", help="Run Random Forest with SHAP analysis")
     rf_shap_parser = setup_common_args(rf_shap_parser)
     rf_shap_parser = setup_input_output_args(rf_shap_parser)
@@ -364,7 +352,7 @@ See documentation for more examples and detailed parameter descriptions.
         help="Type of mixed model to use"
     )
 
-
+    # Parse arguments
     args = parser.parse_args()
     
     # If no command specified, show help
@@ -562,6 +550,258 @@ See documentation for more examples and detailed parameter descriptions.
                     sys.exit(1)
                 
                 log_print(f"Bracken completed for {len(bracken_results)} samples", level="info")
+    
+    # Handle process command
+    elif args.command == "process":
+        if not args.kreport_dir and not args.bracken_dir:
+            log_print("ERROR: At least one of --kreport-dir or --bracken-dir is required", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Process Kraken/Bracken files
+        log_print("Processing taxonomic files...", level="info")
+        abundance_file = process_kraken_files_only(
+            sample_key=args.sample_key,
+            kreport_dir=args.kreport_dir,
+            bracken_dir=args.bracken_dir,
+            output_dir=args.output_dir,
+            output_prefix=args.output_prefix,
+            taxonomic_level=args.taxonomic_level if hasattr(args, 'taxonomic_level') else "S",
+            skip_kraken=args.skip_kraken,
+            skip_bracken=args.skip_bracken,
+            no_interactive=args.no_interactive,
+            log_file=args.log_file
+        )
+        
+        if not abundance_file:
+            log_print("ERROR: Processing taxonomic files failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"File processing completed. Abundance file: {abundance_file}", level="info")
+    
+    # Handle analyze command
+    elif args.command == "analyze":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run downstream analysis
+        log_print("Running downstream analysis...", level="info")
+        success = analyze_existing_kraken_files(
+            abundance_file=args.abundance_file,
+            sample_key=args.sample_key,
+            output_dir=args.output_dir,
+            group_col=args.group_col,
+            min_abundance=args.min_abundance,
+            min_prevalence=args.min_prevalence,
+            log_file=args.log_file
+        )
+        
+        if not success:
+            log_print("ERROR: Downstream analysis failed", level="error")
+            sys.exit(1)
+        
+        log_print("Downstream analysis completed successfully", level="info")
+    
+    # Handle diff-abundance command
+    elif args.command == "diff-abundance":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for differential abundance analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run differential abundance analysis
+        log_print("Running differential abundance analysis...", level="info")
+        methods = args.methods.split(",")
+        
+        results = run_taxonomic_differential_abundance(
+            abundance_file=args.abundance_file,
+            sample_key=args.sample_key,
+            output_dir=args.output_dir,
+            group_col=args.group_col,
+            methods=methods,
+            min_abundance=args.min_abundance,
+            min_prevalence=args.min_prevalence,
+            log_file=args.log_file
+        )
+        
+        if not results:
+            log_print("ERROR: Differential abundance analysis failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"Differential abundance analysis completed with {len(results)} methods", level="info")
+    
+    # Handle glmm command
+    elif args.command == "glmm":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for GLMM analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run GLMM analysis
+        log_print("Running GLMM analysis...", level="info")
+        
+        try:
+            # Import GLMM module
+            from kraken_tools.analysis.glmm_analysis import run_glmm_analysis
+            
+            success = run_glmm_analysis(
+                abundance_file=args.abundance_file,
+                sample_key=args.sample_key,
+                output_dir=args.output_dir,
+                formula=args.formula,
+                model=args.model,
+                group_col=args.group_col,
+                min_abundance=args.min_abundance,
+                min_prevalence=args.min_prevalence,
+                logger=logger
+            )
+            
+            if not success:
+                log_print("ERROR: GLMM analysis failed", level="error")
+                sys.exit(1)
+            
+            log_print("GLMM analysis completed successfully", level="info")
+        except ImportError:
+            log_print("ERROR: GLMM analysis module not found", level="error")
+            sys.exit(1)
+            
+    # Handle permanova command
+    elif args.command == "permanova":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for PERMANOVA analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run PERMANOVA analysis
+        log_print("Running PERMANOVA analysis...", level="info")
+        results = run_permanova_analysis(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            categorical_vars=args.categorical_vars,
+            group_col=args.group_col,
+            distance_metric=args.distance_metric,
+            transform=args.transform,
+            permutations=args.permutations,
+            min_group_size=args.min_group_size,
+            make_pcoa=args.make_pcoa,
+            log_file=args.log_file
+        )
+        
+        if not results:
+            log_print("ERROR: PERMANOVA analysis failed", level="error")
+            sys.exit(1)
+        
+        sig_count = sum(1 for r in results.values() if r['p_value'] < 0.05)
+        log_print(f"PERMANOVA analysis completed with {sig_count} significant variables", level="info")
+
+    # Handle feature-selection command
+    elif args.command == "feature-selection":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for feature selection", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run feature selection
+        log_print("Running Random Forest feature selection...", level="info")
+        results = run_feature_selection(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            predictors=args.predictors,
+            n_estimators=args.n_estimators,
+            distance_metric=args.distance_metric,
+            transform=args.transform,
+            test_size=args.test_size,
+            random_state=args.random_state,
+            log_file=args.log_file
+        )
+        
+        if results is None:
+            log_print("ERROR: Feature selection failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"Feature selection completed with {len(results)} ranked features", level="info")
+
+    # Handle rf-shap command
+    elif args.command == "rf-shap":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for RF-SHAP analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run RF-SHAP analysis
+        log_print("Running Random Forest with SHAP analysis...", level="info")
+        results = run_rf_shap_analysis(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            target_taxa=args.target_taxa,
+            predictors=args.predictors,
+            random_effects=args.random_effects,
+            transform=args.transform,
+            n_estimators=args.n_estimators,
+            test_size=args.test_size,
+            top_n=args.top_n,
+            mixed_model=args.mixed_model,
+            log_file=args.log_file
+        )
+        
+        if not results:
+            log_print("ERROR: RF-SHAP analysis failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"RF-SHAP analysis completed for {len(results)} taxa", level="info")
+
+    # Calculate and report elapsed time
+    elapsed = time.time() - start_time
+    hh, rr = divmod(elapsed, 3600)
+    mm, ss = divmod(rr, 60)
+    log_print(f"Command '{args.command}' finished in {int(hh)}h {int(mm)}m {int(ss)}s", level="info")
+
+
+if __name__ == "__main__":
+    main()
         
         # Process files step
         abundance_file = None
@@ -729,7 +969,7 @@ See documentation for more examples and detailed parameter descriptions.
             
             if args.use_parallel:
                 bracken_results = run_bracken_parallel(
-                    kreport_files=kreport_files if 'kreport_files' in locals() else None,
+                    kreport_files=kreport_files if kreport_files else None,
                     output_dir=bracken_dir,
                     threads=args.threads_per_sample,
                     max_parallel=args.max_parallel,
@@ -740,7 +980,7 @@ See documentation for more examples and detailed parameter descriptions.
                 )
             else:
                 bracken_results = run_bracken(
-                    kreport_files=kreport_files if 'kreport_files' in locals() else None,
+                    kreport_files=kreport_files if kreport_files else None,
                     output_dir=bracken_dir,
                     threads=args.threads,
                     bracken_db=args.bracken_db,
@@ -754,265 +994,3 @@ See documentation for more examples and detailed parameter descriptions.
                 sys.exit(1)
             
             log_print(f"Bracken completed for {len(bracken_results)} samples", level="info")
-    
-    # Handle process command
-    elif args.command == "process":
-        if not args.kreport_dir and not args.bracken_dir:
-            log_print("ERROR: At least one of --kreport-dir or --bracken-dir is required", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Process Kraken/Bracken files
-        log_print("Processing taxonomic files...", level="info")
-        abundance_file = process_kraken_files_only(
-            sample_key=args.sample_key,
-            kreport_dir=args.kreport_dir,
-            bracken_dir=args.bracken_dir,
-            output_dir=args.output_dir,
-            output_prefix=args.output_prefix,
-            taxonomic_level=args.taxonomic_level if hasattr(args, 'taxonomic_level') else "S",
-            skip_kraken=args.skip_kraken,
-            skip_bracken=args.skip_bracken,
-            no_interactive=args.no_interactive,
-            log_file=args.log_file
-        )
-        
-        if not abundance_file:
-            log_print("ERROR: Processing taxonomic files failed", level="error")
-            sys.exit(1)
-        
-        log_print(f"File processing completed. Abundance file: {abundance_file}", level="info")
-    
-    # Handle analyze command
-    elif args.command == "analyze":
-        if not args.abundance_file:
-            log_print("ERROR: --abundance-file is required for analysis", level="error")
-            sys.exit(1)
-        
-        if not os.path.isfile(args.abundance_file):
-            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run downstream analysis
-        log_print("Running downstream analysis...", level="info")
-        success = analyze_existing_kraken_files(
-            abundance_file=args.abundance_file,
-            sample_key=args.sample_key,
-            output_dir=args.output_dir,
-            group_col=args.group_col,
-            min_abundance=args.min_abundance,
-            min_prevalence=args.min_prevalence,
-            log_file=args.log_file
-        )
-        
-        if not success:
-            log_print("ERROR: Downstream analysis failed", level="error")
-            sys.exit(1)
-        
-        log_print("Downstream analysis completed successfully", level="info")
-    
-    # Handle diff-abundance command
-    elif args.command == "diff-abundance":
-        if not args.abundance_file:
-            log_print("ERROR: --abundance-file is required for differential abundance analysis", level="error")
-            sys.exit(1)
-        
-        if not os.path.isfile(args.abundance_file):
-            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run differential abundance analysis
-        log_print("Running differential abundance analysis...", level="info")
-        methods = args.methods.split(",")
-        
-        results = run_taxonomic_differential_abundance(
-            abundance_file=args.abundance_file,
-            sample_key=args.sample_key,
-            output_dir=args.output_dir,
-            group_col=args.group_col,
-            methods=methods,
-            min_abundance=args.min_abundance,
-            min_prevalence=args.min_prevalence,
-            log_file=args.log_file
-        )
-        
-        if not results:
-            log_print("ERROR: Differential abundance analysis failed", level="error")
-            sys.exit(1)
-        
-        log_print(f"Differential abundance analysis completed with {len(results)} methods", level="info")
-    
-    # Handle glmm command
-    elif args.command == "glmm":
-        if not args.abundance_file:
-            log_print("ERROR: --abundance-file is required for GLMM analysis", level="error")
-            sys.exit(1)
-        
-        if not os.path.isfile(args.abundance_file):
-            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run GLMM analysis
-        log_print("Running GLMM analysis...", level="info")
-        
-        try:
-            # Import GLMM module
-            from kraken_tools.analysis.glmm_analysis import run_glmm_analysis
-            
-            success = run_glmm_analysis(
-                abundance_file=args.abundance_file,
-                sample_key=args.sample_key,
-                output_dir=args.output_dir,
-                formula=args.formula,
-                model=args.model,
-                group_col=args.group_col,
-                min_abundance=args.min_abundance,
-                min_prevalence=args.min_prevalence,
-                logger=logger
-            )
-            
-            if not success:
-                log_print("ERROR: GLMM analysis failed", level="error")
-                sys.exit(1)
-            
-            log_print("GLMM analysis completed successfully", level="info")
-        except ImportError:
-            log_print("ERROR: GLMM analysis module not found", level="error")
-            sys.exit(1)
-    
-                taxonomic_level=args.taxonomic_level,
-                threshold=args.threshold,
-                kneaddata_output_dir=kneaddata_output_dir,
-                kraken_output_dir=kraken_output_dir,
-                bracken_output_dir=bracken_output_dir,
-                logger=logger,
-            )
-
-    # Here we would add the processing steps for Kraken/Bracken files
-    # and downstream analysis similar to how it's done in humann3_tools
-    # ...
-
-
-    elif args.command == "permanova":
-        if not args.abundance_file:
-            log_print("ERROR: --abundance-file is required for PERMANOVA analysis", level="error")
-            sys.exit(1)
-        
-        if not os.path.isfile(args.abundance_file):
-            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run PERMANOVA analysis
-        log_print("Running PERMANOVA analysis...", level="info")
-        results = run_permanova_analysis(
-            abundance_file=args.abundance_file,
-            metadata_file=args.sample_key,
-            output_dir=args.output_dir,
-            categorical_vars=args.categorical_vars,
-            group_col=args.group_col,
-            distance_metric=args.distance_metric,
-            transform=args.transform,
-            permutations=args.permutations,
-            min_group_size=args.min_group_size,
-            make_pcoa=args.make_pcoa,
-            log_file=args.log_file
-        )
-        
-        if not results:
-            log_print("ERROR: PERMANOVA analysis failed", level="error")
-            sys.exit(1)
-        
-        sig_count = sum(1 for r in results.values() if r['p_value'] < 0.05)
-        log_print(f"PERMANOVA analysis completed with {sig_count} significant variables", level="info")
-
-    elif args.command == "feature-selection":
-        if not args.abundance_file:
-            log_print("ERROR: --abundance-file is required for feature selection", level="error")
-            sys.exit(1)
-        
-        if not os.path.isfile(args.abundance_file):
-            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run feature selection
-        log_print("Running Random Forest feature selection...", level="info")
-        results = run_feature_selection(
-            abundance_file=args.abundance_file,
-            metadata_file=args.sample_key,
-            output_dir=args.output_dir,
-            predictors=args.predictors,
-            n_estimators=args.n_estimators,
-            distance_metric=args.distance_metric,
-            transform=args.transform,
-            test_size=args.test_size,
-            random_state=args.random_state,
-            log_file=args.log_file
-        )
-        
-        if results is None:
-            log_print("ERROR: Feature selection failed", level="error")
-            sys.exit(1)
-        
-        log_print(f"Feature selection completed with {len(results)} ranked features", level="info")
-
-    elif args.command == "rf-shap":
-        if not args.abundance_file:
-            log_print("ERROR: --abundance-file is required for RF-SHAP analysis", level="error")
-            sys.exit(1)
-        
-        if not os.path.isfile(args.abundance_file):
-            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
-            sys.exit(1)
-        
-        # Create output directory
-        os.makedirs(args.output_dir, exist_ok=True)
-        
-        # Run RF-SHAP analysis
-        log_print("Running Random Forest with SHAP analysis...", level="info")
-        results = run_rf_shap_analysis(
-            abundance_file=args.abundance_file,
-            metadata_file=args.sample_key,
-            output_dir=args.output_dir,
-            target_taxa=args.target_taxa,
-            predictors=args.predictors,
-            random_effects=args.random_effects,
-            transform=args.transform,
-            n_estimators=args.n_estimators,
-            test_size=args.test_size,
-            top_n=args.top_n,
-            mixed_model=args.mixed_model,
-            log_file=args.log_file
-        )
-        
-        if not results:
-            log_print("ERROR: RF-SHAP analysis failed", level="error")
-            sys.exit(1)
-        
-        log_print(f"RF-SHAP analysis completed for {len(results)} taxa", level="info")
-
-
-    elapsed = time.time() - start_time
-    hh, rr = divmod(elapsed, 3600)
-    mm, ss = divmod(rr, 60)
-    log_print(f"Command '{args.command}' finished in {int(hh)}h {int(mm)}m {int(ss)}s", level="info")
-
-
-if __name__ == "__main__":
-    main()
