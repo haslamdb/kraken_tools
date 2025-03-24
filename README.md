@@ -64,6 +64,7 @@ Kraken Tools provides a comprehensive set of commands for different stages of mi
 | `permanova` | Permutational Multivariate Analysis of Variance for community-level differences |
 | `feature-selection` | Random Forest feature importance analysis for microbiome drivers |
 | `rf-shap` | Random Forest with SHAP (SHapley Additive exPlanations) values for interpretable ML |
+| `tsne` | Run t-SNE dimensionality reduction and visualization for community structure analysis |
 
 ### Utilities
 
@@ -197,7 +198,19 @@ kraken-tools rf-shap \
     --transform clr
 ```
 
-#### 11. Utility: List Files
+#### 11. t-SNE Visualization
+
+```bash
+kraken-tools tsne \
+    --abundance-file processed_abundance.tsv \
+    --sample-key metadata.csv \
+    --output-dir results/tsne/ \
+    --target-taxa "Bacteroides.fragilis,Faecalibacterium.prausnitzii" \
+    --categorical-vars "Treatment,TimePoint" \
+    --transform clr
+```
+
+#### 12. Utility: List Files
 
 ```bash
 kraken-tools list-files \

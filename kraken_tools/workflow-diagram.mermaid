@@ -4,18 +4,18 @@ flowchart TD
         A2[Sample Metadata\nmetadata.csv] --> C1
     end
 
-    subgraph "Stage 1: Preprocessing"
+    subgraph "Step 1: Preprocessing with KneadData"
         B1[KneadData\nQC and Host Depletion] --> B2[Clean Reads]
     end
 
-    subgraph "Stage 2: Taxonomic Classification"
+    subgraph "Step 2: Taxonomic Classification"
         B2 --> C1[Kraken2\nTaxonomic Assignment]
-        C1 --> C2[kreport files]
+        C1 --> C2[kreport Files]
         C2 --> C3[Bracken\nAbundance Estimation]
         C3 --> C4[Bracken Abundance Files]
     end
 
-    subgraph "Stage 3: Data Processing"
+    subgraph "Step 3: Data Processing"
         C2 --> D1[Merge kreport Files]
         C4 --> D2[Merge Bracken Files]
         D1 --> D3[Normalize and Filter\nAbundance Tables]
@@ -23,37 +23,47 @@ flowchart TD
         D3 --> D4[Processed\nAbundance Data]
     end
 
-    subgraph "Stage 4: Statistical Analysis"
-        D4 --> E1[Diversity Analysis\nShannon, Simpson, etc.]
-        D4 --> E2[PCA and\nCluster Analysis]
-        D4 --> E3[Statistical Tests\nKruskal-Wallis, Dunn's]
-        D4 --> E4[Differential Abundance\nALDEx2, ANCOM, ANCOM-BC]
-        D4 --> E5[GLMM Analysis\nZero-inflated Poisson/NegBin]
+    subgraph "Step 4: Exploratory Analysis"
+        D4 --> E1[Alpha Diversity\nShannon, Simpson, etc.]
+        D4 --> E2[Beta Diversity\nPCA/PCoA Analysis]
+        D4 --> E3[Taxonomic Visualization\nHeatmaps, Barplots]
     end
 
-    subgraph "CLI Commands"
-        CMD1["kraken-tools full-pipeline"]
-        CMD2["kraken-tools preprocess"]
-        CMD3["kraken-tools classify"]
-        CMD4["kraken-tools process"]
-        CMD5["kraken-tools analyze"]
-        CMD6["kraken-tools diff-abundance"]
-        CMD7["kraken-tools glmm"]
+    subgraph "Step 5: Differential Analysis"
+        D4 --> F1[PERMANOVA\nCommunity-Level Differences]
+        D4 --> F2[Differential Abundance\nALDEx2, ANCOM, ANCOM-BC]
+        D4 --> F3[Feature Selection\nRandom Forest Importance]
     end
 
-    CMD1 -.-> A1
-    CMD1 -.-> E5
-    CMD2 -.-> B1
-    CMD3 -.-> C1
-    CMD4 -.-> D1
-    CMD5 -.-> E2
-    CMD6 -.-> E4
-    CMD7 -.-> E5
+    subgraph "Step 6: Advanced Modeling"
+        D4 --> G1[GLMM\nGeneralized Linear Mixed Models]
+        D4 --> G2[RF-SHAP\nRandom Forest with SHAP]
+    end
 
-    style CMD1 fill:#f9f,stroke:#333,stroke-width:2px
-    style CMD2 fill:#bbf,stroke:#333,stroke-width:2px
-    style CMD3 fill:#bbf,stroke:#333,stroke-width:2px
-    style CMD4 fill:#bbf,stroke:#333,stroke-width:2px
-    style CMD5 fill:#bbf,stroke:#333,stroke-width:2px
-    style CMD6 fill:#bbf,stroke:#333,stroke-width:2px
-    style CMD7 fill:#bbf,stroke:#333,stroke-width:2px
+    %% Command-line relationships
+    CMD1["kraken-tools full-pipeline"] --- A1
+    CMD1 --- G2
+    
+    CMD2["kraken-tools preprocess"] --- B1
+    CMD3["kraken-tools classify"] --- C1
+    CMD4["kraken-tools process"] --- D3
+    CMD5["kraken-tools analyze"] --- E3
+    CMD6["kraken-tools diff-abundance"] --- F2
+    CMD7["kraken-tools permanova"] --- F1
+    CMD8["kraken-tools feature-selection"] --- F3
+    CMD9["kraken-tools glmm"] --- G1
+    CMD10["kraken-tools rf-shap"] --- G2
+
+    %% Style commands
+    classDef commandStyle fill:#f9f,stroke:#333,stroke-width:2px
+    class CMD1,CMD2,CMD3,CMD4,CMD5,CMD6,CMD7,CMD8,CMD9,CMD10 commandStyle
+    
+    %% Style data/steps
+    classDef dataStyle fill:#e6f3ff,stroke:#333,stroke-width:1px
+    class A1,A2,B2,C2,C4,D4 dataStyle
+    
+    classDef stepStyle fill:#ccffcc,stroke:#333,stroke-width:1px
+    class B1,C1,C3,D1,D2,D3 stepStyle
+    
+    classDef analysisStyle fill:#ffeecc,stroke:#333,stroke-width:1px
+    class E1,E2,E3,F1,F2,F3,G1,G2 analysisStyle
