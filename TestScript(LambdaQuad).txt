@@ -1,0 +1,7 @@
+kraken-tools classify --input-fastq ~/Analysis/TrimmedMSSFiles/trimmed_read1_G3Heidi010.fastq.gz \
+	 ~/Analysis/TrimmedMSSFiles/trimmed_read2_G3Heidi010.fastq.gz \
+	--paired \
+	--kraken-db ~/Databases/Kraken2DB \
+	--threads 12 --use-parallel \
+	--taxonomic-level S \
+	--output-dir ~/Desktop/kraken-tools-results 
