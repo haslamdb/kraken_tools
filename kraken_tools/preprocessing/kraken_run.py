@@ -120,6 +120,36 @@ def process_single_sample_kraken(input_file, sample_id=None, output_dir=None,
         'output': output_file
     }
 
+# Add this function at the module level (outside any other functions)
+def paired_kraken_wrapper(input_file, sample_id=None, paired_file=None, **kwargs):
+    """
+    Wrapper to handle paired files correctly for Kraken.
+    
+    Args:
+        input_file: Path to input file (R1 for paired-end)
+        sample_id: Sample identifier
+        paired_file: Path to paired file (R2)
+        **kwargs: Additional arguments for process_single_sample_kraken
+        
+    Returns:
+        Dictionary with output file paths or None if failed
+    """
+    # Call the appropriate function based on whether this is paired data
+    if paired_file:
+        return process_single_sample_kraken(
+            input_file, 
+            sample_id=sample_id, 
+            paired_file=paired_file, 
+            **kwargs
+        )
+    else:
+        return process_single_sample_kraken(
+            input_file,
+            sample_id=sample_id,
+            **kwargs
+        )
+
+@track_peak_memory
 def run_kraken_parallel(input_files, output_dir, threads=1, max_parallel=None,
                       kraken_db=None, paired=False, additional_options=None,
                       logger=None):
@@ -186,24 +216,6 @@ def run_kraken_parallel(input_files, output_dir, threads=1, max_parallel=None,
             'logger': logger
         }
         
-        # Define wrapper function to handle paired/unpaired correctly
-        def paired_kraken_wrapper(input_file, sample_id=None, paired_file=None, **kwargs):
-            # This function is defined in preprocessing/parallel.py
-            if paired_file:
-                return process_single_sample_kraken(
-                    input_file, 
-                    sample_id=sample_id, 
-                    paired_file=paired_file, 
-                    **kwargs
-                )
-            else:
-                return process_single_sample_kraken(
-                    input_file,
-                    sample_id=sample_id,
-                    **kwargs
-                )
-        
-        # Run in parallel
         results = run_parallel(sample_list, paired_kraken_wrapper, 
                              max_workers=max_parallel, **kwargs)
         
