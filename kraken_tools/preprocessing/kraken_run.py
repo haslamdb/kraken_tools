@@ -149,7 +149,7 @@ def paired_kraken_wrapper(input_file, sample_id=None, paired_file=None, **kwargs
             **kwargs
         )
 
-@track_peak_memory
+
 def run_kraken_parallel(input_files, output_dir, threads=1, max_parallel=None,
                       kraken_db=None, paired=False, additional_options=None,
                       logger=None):
