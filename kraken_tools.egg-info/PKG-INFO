@@ -33,6 +33,7 @@ Requires-Dist: seaborn>=0.11.0
 Requires-Dist: matplotlib-venn>=0.11.7
 Requires-Dist: psutil>=5.9.0
 Requires-Dist: tqdm>=4.62.0
+Requires-Dist: shap>=0.45.0
 Provides-Extra: dev
 Requires-Dist: pytest>=6.2.5; extra == "dev"
 Requires-Dist: flake8>=4.0.1; extra == "dev"
