@@ -172,7 +172,7 @@ def run_kraken_parallel(input_files, output_dir, threads=1, max_parallel=None,
     from kraken_tools.utils.resource_utils import track_peak_memory
     from kraken_tools.preprocessing.parallel import run_parallel
     
-    @track_peak_memory
+  
     def _run_kraken_parallel(input_files, output_dir, threads_per_sample, max_parallel,
                            kraken_db, paired, additional_options, logger):
         if logger is None:
@@ -199,7 +199,7 @@ def run_kraken_parallel(input_files, output_dir, threads=1, max_parallel=None,
                 r2_file = input_files[i+1]
                 
                 # Get sample name from the R1 file
-                sample_name = os.path.basename(r1_file).split('_')[0]
+                sample_name = extract_sample_name(r1_file)
                 sample_list.append((sample_name, r1_file, r2_file))
         else:
             # Single-end reads
@@ -240,6 +240,60 @@ def run_kraken_parallel(input_files, output_dir, threads=1, max_parallel=None,
         input_files, output_dir, threads, max_parallel,
         kraken_db, paired, additional_options, logger
     )
+
+def extract_sample_name(filename):
+    """
+    Extract sample name from filename using various heuristics.
+    
+    For paired files like "trimmed_read1_SampleName.fastq.gz", extracts "SampleName".
+    
+    Args:
+        filename: Path to input file
+        
+    Returns:
+        Extracted sample name
+    """
+    # Get just the filename without path
+    basename = os.path.basename(filename)
+    
+    # Remove extensions like .fastq, .fastq.gz, .fq, .fq.gz
+    for ext in ['.fastq.gz', '.fq.gz', '.fastq', '.fq']:
+        if basename.lower().endswith(ext):
+            basename = basename[:-len(ext)]
+            break
+    
+    # Try to identify common paired-end patterns
+    patterns = [
+        # Pattern: trimmed_read1_SampleName or trimmed_read2_SampleName
+        r'trimmed_read[12]_(.+)',
+        # Pattern: SampleName_R1 or SampleName_R2
+        r'(.+)_R[12]',
+        # Pattern: SampleName_1 or SampleName_2
+        r'(.+)_[12]',
+        # Pattern: SampleName.R1 or SampleName.R2
+        r'(.+)\.R[12]'
+    ]
+    
+    import re
+    for pattern in patterns:
+        match = re.match(pattern, basename)
+        if match:
+            return match.group(1)
+    
+    # If no pattern matches, fall back to using parts
+    parts = basename.split('_')
+    if len(parts) > 2:
+        # For "trimmed_read1_SampleName", return "SampleName"
+        return parts[2]
+    elif len(parts) == 2:
+        # For patterns like "SampleName_R1", return "SampleName"
+        if parts[1].startswith('R') or parts[1].isdigit():
+            return parts[0]
+        else:
+            return parts[1]
+    
+    # Fallback to original behavior if nothing else works
+    return parts[0]
 
 def run_kraken(input_files, output_dir, threads=1, kraken_db=None,
               paired=False, additional_options=None, logger=None):
@@ -284,7 +338,7 @@ def run_kraken(input_files, output_dir, threads=1, kraken_db=None,
             r2_file = input_files[i+1]
             
             # Get sample name from the file
-            sample_name = os.path.basename(r1_file).split('_')[0]
+            sample_name = extract_sample_name(r1_file)
             logger.info(f"Processing paired files for sample {sample_name}")
             
             sample_output_dir = os.path.join(output_dir, sample_name)
@@ -306,7 +360,7 @@ def run_kraken(input_files, output_dir, threads=1, kraken_db=None,
     else:
         # Process single-end files
         for file in input_files:
-            sample_name = os.path.basename(file).split('.')[0]
+            sample_name = extract_sample_name(file)
             logger.info(f"Processing file for sample {sample_name}")
             
             sample_output_dir = os.path.join(output_dir, sample_name)
