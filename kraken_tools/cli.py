@@ -27,117 +27,285 @@ from kraken_tools.analysis.rf_shap import run_rf_shap_analysis
 
 def setup_common_args(parser):
     """Add common arguments to a parser."""
-    parser.add_argument("--log-file", default=None, help="Path to log file")
-    parser.add_argument(
+    group = parser.add_argument_group('General Options')
+    group.add_argument(
+        "--log-file", 
+        default=None, 
+        help="Path to log file (default: log to console only)"
+    )
+    group.add_argument(
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level (default=INFO)",
+        help="Logging level (default: INFO)"
     )
-    parser.add_argument(
-        "--max-memory", type=int, default=None, help="Maximum memory usage in MB (default: unlimited)"
+    group.add_argument(
+        "--max-memory", 
+        type=int, 
+        default=None, 
+        help="Maximum memory usage in MB (default: unlimited)"
     )
-    parser.add_argument(
-        "--no-interactive", action="store_true", help="Non-interactive mode for sample key column selection"
+    group.add_argument(
+        "--no-interactive", 
+        action="store_true", 
+        help="Non-interactive mode for sample key column selection"
     )
     return parser
-
 
 def setup_input_output_args(parser):
     """Add input/output arguments to a parser."""
-    parser.add_argument("--output-dir", required=True, help="Directory for output files")
-    parser.add_argument(
+    group = parser.add_argument_group('Input/Output Options')
+    group.add_argument(
+        "--output-dir", 
+        required=True, 
+        help="Directory for output files"
+    )
+    group.add_argument(
         "--output-prefix",
         default="ProcessedFiles",
-        help="Prefix for intermediate output files",
+        help="Prefix for intermediate output files (default: ProcessedFiles)"
     )
     return parser
-
 
 def setup_preprocessing_args(parser):
     """Add preprocessing arguments to a parser."""
-    parser.add_argument("--input-fastq", nargs="+", help="Input FASTQ file(s)")
-    parser.add_argument(
-        "--paired", action="store_true", help="Input files are paired-end reads"
+    group = parser.add_argument_group('Preprocessing Options')
+    group.add_argument(
+        "--input-fastq", 
+        nargs="+", 
+        help="Input FASTQ file(s), space-separated. For paired-end, list all files in order: sample1_R1, sample1_R2, sample2_R1, sample2_R2..."
     )
-    parser.add_argument(
-        "--kneaddata-dbs", nargs="+", help="Path(s) to KneadData reference database(s)"
+    group.add_argument(
+        "--paired", 
+        action="store_true", 
+        help="Input files are paired-end reads (must provide an even number of files)"
     )
-    parser.add_argument(
-        "--threads", type=int, default=1, help="Number of threads to use"
+    group.add_argument(
+        "--kneaddata-dbs", 
+        nargs="+", 
+        help="Path(s) to KneadData reference database(s), space-separated"
+    )
+    group.add_argument(
+        "--threads", 
+        type=int, 
+        default=1, 
+        help="Number of threads to use (default: 1)"
     )
     return parser
-
 
 def setup_kraken_args(parser):
     """Add Kraken/Bracken arguments to a parser."""
-    parser.add_argument(
-        "--kraken-db", help="Path to Kraken2 database"
+    group = parser.add_argument_group('Kraken/Bracken Options')
+    group.add_argument(
+        "--kraken-db", 
+        help="Path to Kraken2 database directory"
     )
-    parser.add_argument(
-        "--bracken-db", help="Path to Bracken database file"
+    group.add_argument(
+        "--bracken-db", 
+        help="Path to Bracken database file (usually database[K]mers.kmer_distrib in the Kraken DB directory)"
     )
-    parser.add_argument(
+    group.add_argument(
         "--taxonomic-level", 
         default="S", 
         choices=["D", "P", "C", "O", "F", "G", "S"],
-        help="Taxonomic level for analysis (D=domain, P=phylum, C=class, O=order, F=family, G=genus, S=species)"
+        help="Taxonomic level for analysis - D=domain, P=phylum, C=class, O=order, F=family, G=genus, S=species (default: S)"
     )
-    parser.add_argument(
+    group.add_argument(
         "--threshold", 
         type=float, 
         default=10.0,
-        help="Threshold for Bracken (minimum number of reads required)"
+        help="Threshold for Bracken - minimum number of reads required (default: 10.0)"
     )
     return parser
-
 
 def setup_analysis_args(parser):
     """Add analysis arguments to a parser."""
-    parser.add_argument("--sample-key", required=True, help="CSV file with sample metadata")
-    parser.add_argument(
-        "--group-col", default="Group", help="Column name for grouping in stats"
+    group = parser.add_argument_group('Analysis Options')
+    group.add_argument(
+        "--sample-key", 
+        required=True, 
+        help="CSV file with sample metadata (must have a column with sample IDs matching file names)"
     )
-    parser.add_argument(
-        "--min-abundance", type=float, default=0.01, 
-        help="Minimum relative abundance threshold (default: 0.01 = 1%%)"
+    group.add_argument(
+        "--group-col", 
+        default="Group", 
+        help="Column name for grouping in statistical tests (default: Group)"
     )
-    parser.add_argument(
-        "--min-prevalence", type=float, default=0.1, 
-        help="Minimum prevalence threshold (default: 0.1 = 10%%)"
+    group.add_argument(
+        "--min-abundance", 
+        type=float, 
+        default=0.01, 
+        help="Minimum relative abundance threshold - taxon must have this proportion in at least one sample (default: 0.01 = 1%%)"
+    )
+    group.add_argument(
+        "--min-prevalence", 
+        type=float, 
+        default=0.1, 
+        help="Minimum prevalence threshold - taxon must be present in this proportion of samples (default: 0.1 = 10%%)"
     )
     return parser
-
 
 def setup_diff_abundance_args(parser):
     """Add differential abundance arguments to a parser."""
-    parser.add_argument(
+    group = parser.add_argument_group('Differential Abundance Options')
+    group.add_argument(
         "--methods",
         default="aldex2,ancom,ancom-bc",
-        help="Comma-separated list of methods (default: aldex2,ancom,ancom-bc)",
+        help="Comma-separated list of methods to use: aldex2, ancom, ancom-bc (default: all three)"
+    )
+    group.add_argument(
+        "--filter-groups",
+        help="Comma-separated list of groups to include in the analysis (default: use all groups)"
     )
     return parser
 
+def setup_permanova_args(parser):
+    """Add PERMANOVA-specific arguments to a parser."""
+    group = parser.add_argument_group('PERMANOVA Options')
+    group.add_argument(
+        "--categorical-vars", 
+        help="Comma-separated list of categorical variables to test (default: test all categorical variables)"
+    )
+    group.add_argument(
+        "--distance-metric", 
+        default="bray", 
+        choices=["bray", "jaccard", "euclidean"],
+        help="Distance metric to use (default: bray)"
+    )
+    group.add_argument(
+        "--transform", 
+        default="clr", 
+        choices=["clr", "hellinger", "log", "none"],
+        help="Transformation to apply to abundance data (default: clr)"
+    )
+    group.add_argument(
+        "--permutations", 
+        type=int, 
+        default=999, 
+        help="Number of permutations for significance testing (default: 999)"
+    )
+    group.add_argument(
+        "--min-group-size", 
+        type=int, 
+        default=3, 
+        help="Minimum number of samples per group (default: 3)"
+    )
+    group.add_argument(
+        "--make-pcoa", 
+        action="store_true", 
+        default=True, 
+        help="Generate PCoA plots (default: True)"
+    )
+    return parser
+
+def setup_feature_selection_args(parser):
+    """Add Feature Selection-specific arguments to a parser."""
+    group = parser.add_argument_group('Feature Selection Options')
+    group.add_argument(
+        "--predictors", 
+        help="Comma-separated list of predictor variables (default: use all variables)"
+    )
+    group.add_argument(
+        "--n-estimators", 
+        type=int, 
+        default=100, 
+        help="Number of trees in Random Forest (default: 100)"
+    )
+    group.add_argument(
+        "--max-features",
+        default="sqrt",
+        choices=["sqrt", "log2", "auto", "none"],
+        help="Maximum number of features to consider at each split (default: sqrt)"
+    )
+    group.add_argument(
+        "--test-size", 
+        type=float, 
+        default=0.2, 
+        help="Proportion of data for testing (default: 0.2)"
+    )
+    group.add_argument(
+        "--random-state", 
+        type=int, 
+        default=42, 
+        help="Random seed for reproducibility (default: 42)"
+    )
+    return parser
+
+def setup_rf_shap_args(parser):
+    """Add RF-SHAP-specific arguments to a parser."""
+    group = parser.add_argument_group('RF-SHAP Options')
+    group.add_argument(
+        "--target-taxa", 
+        help="Comma-separated list of taxa to analyze (default: top 10 most abundant)"
+    )
+    group.add_argument(
+        "--predictors", 
+        help="Comma-separated list of predictor variables (default: all columns)"
+    )
+    group.add_argument(
+        "--random-effects", 
+        help="Comma-separated list of random effect variables for mixed models (default: None)"
+    )
+    group.add_argument(
+        "--top-n", 
+        type=int, 
+        default=10, 
+        help="Number of top taxa to analyze if target-taxa not specified (default: 10)"
+    )
+    group.add_argument(
+        "--mixed-model", 
+        default="lmer", 
+        choices=["lmer", "glmm"],
+        help="Type of mixed model to use (default: lmer)"
+    )
+    return parser
+
+def setup_glmm_args(parser):
+    """Add GLMM-specific arguments to a parser."""
+    group = parser.add_argument_group('GLMM Options')
+    group.add_argument(
+        "--formula", 
+        required=True, 
+        help="R-style formula for GLMM (e.g., 'Count ~ Group + (1|Subject)')"
+    )
+    group.add_argument(
+        "--model", 
+        default="negbin", 
+        choices=["poisson", "negbin"], 
+        help="Model family for GLMM (default: negbin)"
+    )
+    group.add_argument(
+        "--target-taxa", 
+        help="Comma-separated list of taxa to analyze (default: top 20 most abundant)"
+    )
+    return parser
 
 def setup_parallel_args(parser):
     """Add parallel processing arguments to a parser."""
-    parser.add_argument(
-        "--threads-per-sample", type=int, default=1, help="Number of threads per sample"
+    group = parser.add_argument_group('Parallel Processing Options')
+    group.add_argument(
+        "--threads-per-sample", 
+        type=int, 
+        default=1, 
+        help="Number of threads to allocate to each sample (default: 1)"
     )
-    parser.add_argument(
-        "--max-parallel", type=int, default=None, help="Maximum samples to process in parallel"
+    group.add_argument(
+        "--max-parallel", 
+        type=int, 
+        default=None, 
+        help="Maximum number of samples to process in parallel (default: auto-detect based on CPU cores)"
     )
-    parser.add_argument(
-        "--use-parallel", action="store_true", help="Use parallel processing"
+    group.add_argument(
+        "--use-parallel", 
+        action="store_true", 
+        help="Enable parallel processing of multiple samples simultaneously"
     )
     return parser
-
-
 
 def main():
     """Main entry point for the kraken_tools CLI."""
     
-    # Create the top-level parser
+    # Create the top-level parser with improved description and help
     parser = argparse.ArgumentParser(
         description="Kraken Tools: Process and analyze Kraken2/Bracken taxonomic output",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -152,15 +320,31 @@ Example commands:
   # Run only differential abundance analysis
   kraken-tools diff-abundance --abundance-file abundance.tsv --sample-key metadata.csv --output-dir results/diff_abundance/
   
-See documentation for more examples and detailed parameter descriptions.
+  # Run PERMANOVA analysis on existing abundance data
+  kraken-tools permanova --abundance-file abundance.tsv --sample-key metadata.csv --output-dir results/permanova/
+  
+  # Run Random Forest feature selection
+  kraken-tools feature-selection --abundance-file abundance.tsv --sample-key metadata.csv --output-dir results/features/
+  
+  # Run Random Forest with SHAP analysis
+  kraken-tools rf-shap --abundance-file abundance.tsv --sample-key metadata.csv --output-dir results/rf_shap/
+  
+For detailed help on a specific command, run: kraken-tools COMMAND --help
         """
     )
     
     # Create subparsers for different commands
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
     
+    # Then continue with your existing parser setup, but use the improved setup functions
+    
     # 1. Full pipeline command
-    full_pipeline_parser = subparsers.add_parser("full-pipeline", help="Run the complete pipeline from raw reads to analysis")
+    full_pipeline_parser = subparsers.add_parser(
+        "full-pipeline", 
+        help="Run the complete pipeline from raw reads to analysis",
+        description="Process raw sequence data through KneadData, Kraken2, and Bracken, then perform downstream analysis.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     full_pipeline_parser = setup_common_args(full_pipeline_parser)
     full_pipeline_parser = setup_input_output_args(full_pipeline_parser)
     full_pipeline_parser = setup_preprocessing_args(full_pipeline_parser)

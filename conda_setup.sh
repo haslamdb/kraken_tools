@@ -97,6 +97,8 @@ conda install --name $ENV_NAME -y -c conda-forge \
     scipy \
     scikit-learn \
     scikit-posthocs \
+    scikit-bio \
+    shap \
     statsmodels \
     tqdm \
     psutil \

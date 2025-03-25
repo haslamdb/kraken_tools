@@ -165,8 +165,9 @@ def install_dependencies(env_name, bioconda_channel):
     # Dependencies that are better installed with pip
     pip_deps = [
         "scikit-posthocs",   # For Dunn's test
-        "scikit-bio",        # For compositional data analysis
-        "matplotlib-venn"    # For Venn diagrams
+        "scikit-bio",        
+        "matplotlib-venn",
+        "shap"   
     ]
     
     # Install core dependencies from conda
