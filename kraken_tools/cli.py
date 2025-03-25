@@ -280,6 +280,31 @@ def setup_glmm_args(parser):
     )
     return parser
 
+def setup_tsne_args(parser):
+    """Add t-SNE-specific arguments to a parser."""
+    group = parser.add_argument_group('t-SNE Options')
+    group.add_argument(
+        "--target-taxa", 
+        help="Comma-separated list of taxa to visualize (default: top 10 by abundance)"
+    )
+    group.add_argument(
+        "--categorical-vars", 
+        help="Comma-separated list of categorical variables to visualize (default: auto-detect)"
+    )
+    group.add_argument(
+        "--perplexity", 
+        type=int, 
+        default=30, 
+        help="Perplexity parameter for t-SNE (default: 30)"
+    )
+    group.add_argument(
+        "--n-iter", 
+        type=int, 
+        default=1000, 
+        help="Number of iterations for t-SNE (default: 1000)"
+    )
+    return parser
+
 def setup_parallel_args(parser):
     """Add parallel processing arguments to a parser."""
     group = parser.add_argument_group('Parallel Processing Options')
@@ -547,6 +572,23 @@ For detailed help on a specific command, run: kraken-tools COMMAND --help
     rf_shap_parser.add_argument(
         "--mixed-model", default="lmer", choices=["lmer", "glmm"],
         help="Type of mixed model to use"
+    )
+
+    # 12. t-SNE command
+    tsne_parser = subparsers.add_parser(
+        "tsne", 
+        help="Run t-SNE visualization on abundance data",
+        description="Generate t-SNE visualizations for microbiome composition data colored by taxa abundance and metadata variables.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
+    tsne_parser = setup_common_args(tsne_parser)
+    tsne_parser = setup_input_output_args(tsne_parser)
+    tsne_parser = setup_analysis_args(tsne_parser)
+    tsne_parser = setup_tsne_args(tsne_parser)
+    tsne_parser.add_argument(
+        "--abundance-file", 
+        required=True, 
+        help="Path to abundance file"
     )
 
     # Parse arguments
@@ -1189,6 +1231,43 @@ For detailed help on a specific command, run: kraken-tools COMMAND --help
             sys.exit(1)
         
         log_print(f"RF-SHAP analysis completed for {len(results)} taxa", level="info")
+
+    # Handle tsne command
+    elif args.command == "tsne":
+        if not args.abundance_file:
+            log_print("ERROR: --abundance-file is required for t-SNE analysis", level="error")
+            sys.exit(1)
+        
+        if not os.path.isfile(args.abundance_file):
+            log_print(f"ERROR: Abundance file not found: {args.abundance_file}", level="error")
+            sys.exit(1)
+        
+        # Create output directory
+        os.makedirs(args.output_dir, exist_ok=True)
+        
+        # Run t-SNE analysis
+        log_print("Running t-SNE visualization...", level="info")
+        
+        from kraken_tools.analysis.tsne import run_tsne_analysis
+        
+        output_dir = run_tsne_analysis(
+            abundance_file=args.abundance_file,
+            metadata_file=args.sample_key,
+            output_dir=args.output_dir,
+            target_taxa=args.target_taxa,
+            categorical_vars=args.categorical_vars,
+            group_col=args.group_col,
+            transform=args.transform if hasattr(args, 'transform') else "clr",
+            perplexity=args.perplexity,
+            n_iter=args.n_iter,
+            log_file=args.log_file
+        )
+        
+        if not output_dir:
+            log_print("ERROR: t-SNE analysis failed", level="error")
+            sys.exit(1)
+        
+        log_print(f"t-SNE visualization completed. Results saved to {output_dir}", level="info")
 
     # Calculate and report elapsed time
     elapsed = time.time() - start_time
