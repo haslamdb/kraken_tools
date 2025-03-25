@@ -133,6 +133,7 @@ def setup_parallel_args(parser):
     return parser
 
 
+
 def main():
     """Main entry point for the kraken_tools CLI."""
     
